@@ -2,378 +2,691 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lend & Borrow Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sree Ledger</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-dark { background-color: #161821; }
+    .card-darker { background-color: #1c1f2b; }
+    /* Hide scrollbar for clean mobile look */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #000000; }
+    ::-webkit-scrollbar-thumb { background: #2d3142; border-radius: 2px; }
+  </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen p-4 md:p-8">
+<body class="min-h-screen flex justify-center bg-black">
 
-  <div class="max-w-6xl mx-auto">
-    <!-- Top Header -->
-    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900">Personal Lend & Borrow Ledger</h1>
-        <p class="text-sm text-slate-500">Click any person tile to view history, edit, or delete transactions</p>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="openEntryModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
-          + New Entry
-        </button>
-        <button onclick="fetchAllData()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
-          Refresh
-        </button>
-      </div>
-    </header>
+  <!-- Mobile App Container -->
+  <div class="w-full max-w-md min-h-screen bg-black flex flex-col relative pb-20 select-none">
 
-    <!-- Overall Summary Banner -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">You Will Get (They Owe You)</span>
-        <p id="totalToGet" class="text-2xl font-bold text-emerald-600 mt-1">₹0</p>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">You Owe (To Pay Back)</span>
-        <p id="totalToPay" class="text-2xl font-bold text-rose-600 mt-1">₹0</p>
-      </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Overall Position</span>
-        <p id="netPosition" class="text-2xl font-bold text-slate-800 mt-1">₹0</p>
-      </div>
-    </div>
-
-    <!-- Persons Tiles Grid -->
-    <div id="personsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-500 animate-pulse">
-        Syncing ledger with Google Sheets...
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 1: Person Transaction History Popup -->
-  <div id="ledgerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-40">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[88vh]">
+    <!-- ==================== VIEW 1: HOME DASHBOARD ==================== -->
+    <div id="homeView" class="flex-1 flex flex-col p-4">
       
-      <!-- Modal Header -->
-      <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-        <div>
-          <h3 id="modalPersonTitle" class="text-lg font-bold text-slate-900">Person Name</h3>
-          <p id="modalPersonSub" class="text-xs font-medium text-slate-500"></p>
+      <!-- Top Bar -->
+      <div class="flex justify-between items-center py-2 mb-4">
+        <h1 class="text-xl font-semibold tracking-wide text-white">Sree</h1>
+        <button onclick="fetchAllData()" title="Sync Now" class="text-slate-300 hover:text-white p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Summary Banner (To Be Received / To Be Paid) -->
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="card-dark rounded-xl p-3.5 border border-slate-800/80 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-xs text-slate-400">To Be Received</span>
+            <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">↙</span>
+          </div>
+          <p id="totalToReceive" class="text-lg font-bold text-white">₹0.00</p>
         </div>
-        <div class="flex items-center gap-3">
-          <button onclick="openEntryModalForActivePerson()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700">
-            + Add for Person
+
+        <div class="card-dark rounded-xl p-3.5 border border-slate-800/80 flex flex-col justify-between">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="text-xs text-slate-400">To Be Paid</span>
+            <span class="w-6 h-6 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center text-xs font-bold">↗</span>
+          </div>
+          <p id="totalToPay" class="text-lg font-bold text-white">₹0.00</p>
+        </div>
+      </div>
+
+      <!-- Active Contacts Header & Search -->
+      <div class="flex justify-between items-center mb-3">
+        <h2 id="activeContactsCount" class="text-sm font-semibold text-white">Active Contacts (0)</h2>
+        <div class="flex items-center gap-2">
+          <button onclick="toggleSearch()" class="w-9 h-9 rounded-full card-dark flex items-center justify-center text-slate-300 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
           </button>
-          <button onclick="closeLedgerModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+          <button onclick="toggleSortOrder()" title="Sort Contacts" class="w-9 h-9 rounded-full card-dark flex items-center justify-center text-slate-300 hover:text-white">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- Modal Table Body -->
-      <div class="p-6 overflow-y-auto flex-1">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase">
-              <th class="pb-3">Date</th>
-              <th class="pb-3">Flow</th>
-              <th class="pb-3">Amount</th>
-              <th class="pb-3">Notes</th>
-              <th class="pb-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="ledgerTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
-        </table>
+      <!-- Collapsible Search Bar -->
+      <div id="searchBarWrap" class="hidden mb-3">
+        <input type="text" id="contactSearchInput" oninput="renderHomeDashboard()" placeholder="Search contact name..."
+          class="w-full px-3.5 py-2.5 rounded-xl card-dark border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500">
       </div>
 
-      <!-- Modal Footer -->
-      <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
-        <button onclick="closeLedgerModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">
-          Close
+      <!-- Contact Tiles List -->
+      <div id="contactsList" class="space-y-2.5 flex-1 overflow-y-auto">
+        <div class="p-8 text-center text-slate-500 text-sm animate-pulse">Loading contacts...</div>
+      </div>
+    </div>
+
+    <!-- ==================== VIEW 2: ALL TRANSACTIONS TAB ==================== -->
+    <div id="allTxView" class="hidden flex-1 flex flex-col p-4">
+      <h1 class="text-xl font-semibold text-white py-2 mb-4">All Transactions</h1>
+      <div id="allTxList" class="space-y-2.5 flex-1 overflow-y-auto"></div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-16 card-dark border-t border-slate-800/80 flex justify-around items-center z-20 px-6">
+      <button onclick="switchTab('home')" id="navHomeBtn" class="flex flex-col items-center gap-1 text-white">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+        </svg>
+        <span class="text-[11px] font-medium">Home</span>
+      </button>
+
+      <!-- Center Floating + Button -->
+      <button onclick="openAddTransactionModal(null)" class="w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center shadow-lg -mt-6 transition transform active:scale-95">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+        </svg>
+      </button>
+
+      <button onclick="switchTab('transactions')" id="navTxBtn" class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+          <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-[11px] font-medium">Transactions</span>
+      </button>
+    </div>
+
+    <!-- ==================== FULL-SCREEN MODAL 1: PERSON CHAT LEDGER ==================== -->
+    <div id="personLedgerScreen" class="fixed inset-0 max-w-md mx-auto bg-black z-30 hidden flex-col">
+      
+      <!-- Top Header with Edit/Delete icons when a bubble is tapped -->
+      <div class="h-14 px-4 border-b border-slate-800 flex justify-between items-center bg-black">
+        <div class="flex items-center gap-3">
+          <button onclick="closePersonLedger()" class="text-slate-300 hover:text-white p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </button>
+          <div id="ledgerAvatar" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-slate-900">V</div>
+          <h3 id="ledgerPersonName" class="font-semibold text-base text-white truncate max-w-[160px]">Person Name</h3>
+        </div>
+
+        <!-- Contextual Action Icons (Hidden until a transaction card is clicked) -->
+        <div class="flex items-center gap-4">
+          <div id="selectedTxActions" class="hidden items-center gap-4">
+            <button onclick="editSelectedBubble()" title="Edit" class="text-slate-200 hover:text-blue-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+            </button>
+            <button onclick="deleteSelectedBubble()" title="Delete" class="text-slate-200 hover:text-rose-400">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Bubbles Scroll Area -->
+      <div id="chatBubblesContainer" onclick="clearBubbleSelection(event)" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Bottom Balance Pill & Floating + Button -->
+      <div class="fixed bottom-4 left-0 right-0 max-w-md mx-auto px-4 flex justify-center items-center pointer-events-none">
+        <div id="personNetPill" class="px-5 py-2.5 rounded-full bg-slate-600/90 backdrop-blur-md text-white text-xs font-medium shadow-lg pointer-events-auto">
+          You'll get ₹0.00
+        </div>
+        <button onclick="openAddTransactionModal(activePerson)" class="absolute right-5 w-14 h-14 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center shadow-xl pointer-events-auto transition transform active:scale-95">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4"/>
+          </svg>
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL 2: Add / Edit Transaction Popup -->
-  <div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-        <h3 id="entryModalTitle" class="text-base font-bold text-slate-900">New Transaction</h3>
-        <button onclick="closeEntryModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+    <!-- ==================== FULL-SCREEN MODAL 2: ADD / EDIT TRANSACTION ==================== -->
+    <div id="addTxScreen" class="fixed inset-0 max-w-md mx-auto bg-black z-40 hidden flex-col p-4">
+      
+      <!-- Top Header -->
+      <div class="flex justify-between items-center py-2 mb-5">
+        <div class="flex items-center gap-4">
+          <button onclick="closeAddTransactionModal()" class="text-slate-300 hover:text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+          </button>
+          <h2 id="txModalHeaderTitle" class="text-lg font-medium text-white">Add Transaction</h2>
+        </div>
+        <button onclick="submitTransactionForm()" id="saveTxTopBtn" class="text-sm font-semibold tracking-wider text-white hover:text-blue-400 uppercase px-2 py-1">
+          SAVE
+        </button>
       </div>
 
-      <form id="txForm" onsubmit="saveTransaction(event)" class="p-6 space-y-4">
-        <input type="hidden" id="txId">
+      <input type="hidden" id="editTxId">
 
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Person Name</label>
-          <input type="text" id="txPerson" list="existingPersons" required placeholder="e.g., Sampath"
-            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <datalist id="existingPersons"></datalist>
+      <!-- Toggle Pill Buttons: I Received vs I Paid -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <button type="button" id="btnReceived" onclick="setTxType('RECEIVED')"
+          class="py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition border">
+          <span id="radioReceived" class="w-4 h-4 rounded-full border-2 flex items-center justify-center">
+            <span class="w-2 h-2 rounded-full bg-white"></span>
+          </span>
+          <span>I Received</span>
+        </button>
+
+        <button type="button" id="btnPaid" onclick="setTxType('PAID')"
+          class="py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition border">
+          <span id="radioPaid" class="w-4 h-4 rounded-full border-2 flex items-center justify-center">
+            <span class="w-2 h-2 rounded-full bg-white hidden"></span>
+          </span>
+          <span>I Paid</span>
+        </button>
+      </div>
+
+      <!-- Amount and Date Row -->
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="card-dark rounded-xl px-3.5 py-3 flex items-center gap-2 border border-slate-800 focus-within:border-blue-500">
+          <span id="currencySymbol" class="text-emerald-400 font-semibold text-lg">₹</span>
+          <input type="number" step="0.01" id="inputAmount" placeholder="0.00"
+            class="w-full bg-transparent text-white text-lg font-medium focus:outline-none placeholder-slate-500">
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Transaction Type</label>
-            <select id="txType" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="GAVE">You Gave / Lent (+)</option>
-              <option value="GOT">You Got / Borrowed (-)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Amount (₹)</label>
-            <input type="number" step="0.01" id="txAmount" required placeholder="0.00"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          </div>
+        <div class="card-dark rounded-xl px-3.5 py-3 flex items-center gap-2 border border-slate-800 focus-within:border-blue-500">
+          <input type="date" id="inputDate"
+            class="w-full bg-transparent text-slate-200 text-sm focus:outline-none [color-scheme:dark]">
+        </div>
+      </div>
+
+      <!-- Description Box -->
+      <div class="card-dark rounded-xl p-3.5 mb-4 border border-slate-800 focus-within:border-blue-500">
+        <textarea id="inputNotes" rows="3" placeholder="Type your description here"
+          class="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none resize-none"></textarea>
+      </div>
+
+      <!-- Contact Name Input with Floating Upward/Downward Suggestion Box -->
+      <div class="relative">
+        <!-- Floating Suggestion Box (Matches Screenshot 2) -->
+        <div id="contactSuggestionsDropdown" class="hidden absolute left-0 right-0 bottom-full mb-2 card-darker rounded-xl shadow-2xl border border-slate-700/80 max-h-60 overflow-y-auto z-50 divide-y divide-slate-800/60">
+          <!-- Populated dynamically -->
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Date</label>
-          <input type="date" id="txDate" required
-            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <div class="card-dark rounded-xl px-3.5 py-3.5 flex items-center gap-3 border border-slate-800 focus-within:border-blue-500">
+          <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <input type="text" id="inputContactName" autocomplete="off"
+            placeholder="Contact Name"
+            onfocus="showContactSuggestions()"
+            oninput="showContactSuggestions()"
+            class="w-full bg-transparent text-sm text-white placeholder-slate-300 focus:outline-none">
+          <span id="contactMatchStatus" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 whitespace-nowrap hidden"></span>
         </div>
+      </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Notes / Reason</label>
-          <input type="text" id="txNotes" placeholder="e.g., Sent via UPI, Paid back cash"
-            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-
-        <div class="pt-3 flex justify-end gap-2">
-          <button type="button" onclick="closeEntryModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">
-            Cancel
-          </button>
-          <button type="submit" id="saveBtn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
-            Save Transaction
-          </button>
-        </div>
-      </form>
     </div>
+
   </div>
 
   <script>
-    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
-    const API_URL = "https://script.google.com/macros/s/AKfycbz3oWOkGpNyak1rW47hztYQr2_tUghhSpaB_2ghuORjagNI3ahQA2HeGWh368iWUrWd3w/exec";
+    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
+    const API_URL = "https://script.google.com/macros/s/AKfycbyWZ322BqPEIEWwLnIafz5fmrE7ovQKZ9MXv0qNGSpFP47aihji3xWRANBCJl46GZ6EMA/exec";
 
     let allTransactions = [];
+    let uniqueContacts = []; // Canonical contact names
     let activePerson = null;
+    let selectedBubbleTxId = null;
+    let currentTxType = 'RECEIVED'; // 'RECEIVED' or 'PAID'
+    let sortAscending = true;
+
+    const AVATAR_COLORS = [
+      'bg-emerald-400', 'bg-sky-400', 'bg-amber-400',
+      'bg-rose-400', 'bg-indigo-400', 'bg-teal-400', 'bg-purple-400'
+    ];
 
     window.onload = () => {
-      document.getElementById('txDate').valueAsDate = new Date();
+      document.getElementById('inputDate').valueAsDate = new Date();
+      setTxType('RECEIVED');
       fetchAllData();
+
+      // Close suggestion box when clicking outside
+      document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('contactSuggestionsDropdown');
+        const input = document.getElementById('inputContactName');
+        if (!dropdown.contains(e.target) && e.target !== input) {
+          dropdown.classList.add('hidden');
+        }
+      });
     };
 
-    // 1. Fetch all transactions from Google Sheet
-    async function fetchAllData() {
-      const grid = document.getElementById('personsGrid');
-      grid.innerHTML = `<div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-500 animate-pulse">Syncing ledger with Google Sheets...</div>`;
+    function getAvatarColor(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
 
+    function formatDisplayDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(d)) return dateStr;
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    // 1. Fetch All Transactions from Google Sheets
+    async function fetchAllData() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-        allTransactions = data.transactions || [];
-        renderDashboard();
-        if (activePerson) renderPersonLedger(activePerson);
+        allTransactions = (data.transactions || []).map(t => ({
+          ...t,
+          // Support legacy GAVE/GOT or new PAID/RECEIVED
+          type: (t.type === 'GAVE' || t.type === 'PAID') ? 'PAID' : 'RECEIVED'
+        }));
+        extractCanonicalContacts();
+        renderHomeDashboard();
+        renderAllTransactionsTab();
+        if (activePerson) renderPersonChatLedger(activePerson);
       } catch (err) {
-        grid.innerHTML = `<div class="col-span-full p-6 bg-rose-50 border border-rose-200 rounded-xl text-center text-rose-600 text-sm">
-          Failed to connect to Google Sheets API. Make sure you replaced <b>API_URL</b> and deployed with access set to "Anyone".
-        </div>`;
+        document.getElementById('contactsList').innerHTML = `
+          <div class="p-5 card-dark rounded-xl border border-rose-900/60 text-center text-rose-400 text-xs">
+            Could not sync with Google Sheet. Check that <b>API_URL</b> is set and deployed as "Anyone".
+          </div>`;
       }
     }
 
-    // 2. Group by Person and Render Tiles
-    function renderDashboard() {
-      const grid = document.getElementById('personsGrid');
-      const datalist = document.getElementById('existingPersons');
-      grid.innerHTML = '';
-      datalist.innerHTML = '';
+    // Build case-insensitive canonical contact list
+    function extractCanonicalContacts() {
+      const map = new Map();
+      allTransactions.forEach(t => {
+        const clean = t.person.trim();
+        const lower = clean.toLowerCase();
+        if (clean && !map.has(lower)) {
+          map.set(lower, clean);
+        }
+      });
+      uniqueContacts = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+    }
+
+    // 2. Render Home Screen (Summary & Contact Tiles)
+    function renderHomeDashboard() {
+      const listEl = document.getElementById('contactsList');
+      const searchQuery = (document.getElementById('contactSearchInput')?.value || '').trim().toLowerCase();
+      listEl.innerHTML = '';
 
       const peopleMap = {};
 
       allTransactions.forEach(t => {
-        const key = t.person.trim();
-        if (!peopleMap[key]) {
-          peopleMap[key] = { name: key, netBalance: 0, count: 0 };
+        const lower = t.person.trim().toLowerCase();
+        if (!peopleMap[lower]) {
+          peopleMap[lower] = { name: t.person.trim(), net: 0, count: 0 };
         }
-        // GAVE = + (You gave them money, so they owe you / lowers what you owe them)
-        // GOT  = - (You took money from them, so you owe them / lowers what they owe you)
-        if (t.type === 'GAVE') {
-          peopleMap[key].netBalance += Number(t.amount);
+        // PAID = You gave/lent money -> Positive (You'll get)
+        // RECEIVED = You received/borrowed money -> Negative (You'll pay)
+        if (t.type === 'PAID') {
+          peopleMap[lower].net += Number(t.amount);
         } else {
-          peopleMap[key].netBalance -= Number(t.amount);
+          peopleMap[lower].net -= Number(t.amount);
         }
-        peopleMap[key].count++;
+        peopleMap[lower].count++;
       });
 
-      const personsList = Object.values(peopleMap);
+      let contactsArray = Object.values(peopleMap);
 
-      // Update Top Summary Cards
-      let totalGet = 0;
-      let totalPay = 0;
-      personsList.forEach(p => {
-        if (p.netBalance > 0) totalGet += p.netBalance;
-        if (p.netBalance < 0) totalPay += Math.abs(p.netBalance);
-
-        // Populate autocomplete datalist
-        const opt = document.createElement('option');
-        opt.value = p.name;
-        datalist.appendChild(opt);
+      // Calculate Top Banner Totals
+      let totalToReceive = 0;
+      let totalToPay = 0;
+      contactsArray.forEach(c => {
+        if (c.net > 0) totalToReceive += c.net;
+        if (c.net < 0) totalToPay += Math.abs(c.net);
       });
 
-      document.getElementById('totalToGet').innerText = `₹${totalGet.toLocaleString('en-IN')}`;
-      document.getElementById('totalToPay').innerText = `₹${totalPay.toLocaleString('en-IN')}`;
-      const net = totalGet - totalPay;
-      const netEl = document.getElementById('netPosition');
-      netEl.innerText = `${net >= 0 ? '+' : '-'}₹${Math.abs(net).toLocaleString('en-IN')}`;
-      netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+      document.getElementById('totalToReceive').innerText = `₹${totalToReceive.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('totalToPay').innerText = `₹${totalToPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById('activeContactsCount').innerText = `Active Contacts (${contactsArray.length})`;
 
-      if (personsList.length === 0) {
-        grid.innerHTML = `<div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-400">No entries yet. Click "+ New Entry" to add your first transaction.</div>`;
+      // Filter & Sort
+      if (searchQuery) {
+        contactsArray = contactsArray.filter(c => c.name.toLowerCase().includes(searchQuery));
+      }
+      contactsArray.sort((a, b) => sortAscending ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+
+      if (contactsArray.length === 0) {
+        listEl.innerHTML = `<div class="p-8 card-dark rounded-xl text-center text-slate-500 text-sm">No contacts found. Tap + to add a transaction.</div>`;
         return;
       }
 
-      personsList.forEach(p => {
-        const card = document.createElement('div');
-        card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:shadow-md hover:border-indigo-400 transition cursor-pointer flex flex-col justify-between";
-        card.onclick = () => openLedgerModal(p.name);
+      contactsArray.forEach(person => {
+        const avatarBg = getAvatarColor(person.name);
+        const isGet = person.net >= 0;
+        const formattedAmt = Math.abs(person.net).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        let statusBadge = '';
-        let amountClass = '';
+        // Matches Screenshot 4 styling (-₹137.00 Green "You'll get" vs Red "You'll pay")
+        const amountHtml = isGet
+          ? `<span class="text-emerald-400 font-semibold text-sm">-₹${formattedAmt}</span>
+             <span class="text-[11px] italic text-slate-300">You'll get</span>`
+          : `<span class="text-rose-500 font-semibold text-sm">₹${formattedAmt}</span>
+             <span class="text-[11px] italic text-slate-300">You'll pay</span>`;
 
-        if (p.netBalance > 0) {
-          statusBadge = `<span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Owes You</span>`;
-          amountClass = 'text-emerald-600';
-        } else if (p.netBalance < 0) {
-          statusBadge = `<span class="text-xs font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded">You Owe</span>`;
-          amountClass = 'text-rose-600';
-        } else {
-          statusBadge = `<span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Settled</span>`;
-          amountClass = 'text-slate-500';
-        }
+        const tile = document.createElement('div');
+        tile.className = "card-dark px-4 py-3.5 rounded-xl flex justify-between items-center cursor-pointer hover:bg-slate-800/70 transition";
+        tile.onclick = () => openPersonLedger(person.name);
 
-        card.innerHTML = `
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-sm">
-                ${p.name.charAt(0).toUpperCase()}
-              </div>
-              <span class="text-xs text-slate-400">${p.count} entries</span>
+        tile.innerHTML = `
+          <div class="flex items-center gap-3.5 min-w-0">
+            <div class="w-9 h-9 rounded-full ${avatarBg} text-slate-950 font-bold flex items-center justify-center text-sm shrink-0">
+              ${person.name.charAt(0).toUpperCase()}
             </div>
-            <h4 class="font-bold text-slate-800 text-base truncate">${p.name}</h4>
+            <div class="truncate">
+              <h4 class="text-white font-medium text-sm truncate">${person.name}</h4>
+              <p class="text-xs text-slate-400">${person.count} transactions</p>
+            </div>
           </div>
-          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-            ${statusBadge}
-            <span class="font-bold text-base ${amountClass}">₹${Math.abs(p.netBalance).toLocaleString('en-IN')}</span>
+          <div class="flex flex-col items-end shrink-0 ml-3">
+            ${amountHtml}
           </div>
         `;
-        grid.appendChild(card);
+        listEl.appendChild(tile);
       });
     }
 
-    // 3. Open Person Ledger Modal
-    function openLedgerModal(personName) {
+    // 3. Open Person Chat-Bubble Ledger (Matches Screenshots 3 & 5)
+    function openPersonLedger(personName) {
       activePerson = personName;
-      document.getElementById('ledgerModal').classList.remove('hidden');
-      renderPersonLedger(personName);
+      selectedBubbleTxId = null;
+      document.getElementById('selectedTxActions').classList.add('hidden');
+      document.getElementById('personLedgerScreen').classList.remove('hidden');
+      document.getElementById('personLedgerScreen').classList.add('flex');
+      renderPersonChatLedger(personName);
     }
 
-    function renderPersonLedger(personName) {
-      document.getElementById('modalPersonTitle').innerText = personName;
-      const tbody = document.getElementById('ledgerTableBody');
-      tbody.innerHTML = '';
+    function closePersonLedger() {
+      activePerson = null;
+      selectedBubbleTxId = null;
+      document.getElementById('personLedgerScreen').classList.add('hidden');
+      document.getElementById('personLedgerScreen').classList.remove('flex');
+    }
 
-      const personTx = allTransactions.filter(t => t.person.toLowerCase() === personName.toLowerCase());
-      
+    function renderPersonChatLedger(personName) {
+      document.getElementById('ledgerPersonName').innerText = personName;
+      const avatarEl = document.getElementById('ledgerAvatar');
+      avatarEl.innerText = personName.charAt(0).toUpperCase();
+      avatarEl.className = `w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-slate-950 ${getAvatarColor(personName)}`;
+
+      const container = document.getElementById('chatBubblesContainer');
+      container.innerHTML = '';
+
+      const personTx = allTransactions.filter(t => t.person.trim().toLowerCase() === personName.trim().toLowerCase());
+
       let net = 0;
-      personTx.forEach(t => net += (t.type === 'GAVE' ? Number(t.amount) : -Number(t.amount)));
+      personTx.forEach(t => {
+        if (t.type === 'PAID') net += Number(t.amount);
+        else net -= Number(t.amount);
+      });
 
-      const subEl = document.getElementById('modalPersonSub');
-      if (net > 0) subEl.innerText = `${personName} owes you ₹${net.toLocaleString('en-IN')}`;
-      else if (net < 0) subEl.innerText = `You owe ${personName} ₹${Math.abs(net).toLocaleString('en-IN')}`;
-      else subEl.innerText = `All settled up (₹0)`;
+      const pill = document.getElementById('personNetPill');
+      const absNet = Math.abs(net).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (net >= 0) {
+        pill.innerText = `You'll get -₹${absNet}`;
+      } else {
+        pill.innerText = `You'll pay ₹${absNet}`;
+      }
 
       if (personTx.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">No transactions left for this person.</td></tr>`;
+        container.innerHTML = `<div class="text-center text-slate-500 text-sm py-12">No transactions with ${personName} yet.</div>`;
         return;
       }
 
       personTx.forEach(t => {
-        const isGave = t.type === 'GAVE';
-        const badge = isGave
-          ? `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700">You Gave (+)</span>`
-          : `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700">You Got (-)</span>`;
+        const isPaid = t.type === 'PAID';
+        const isSelected = selectedBubbleTxId === t.id;
+        const formattedAmt = Number(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="py-3 text-slate-600 whitespace-nowrap">${t.date}</td>
-          <td class="py-3">${badge}</td>
-          <td class="py-3 font-bold ${isGave ? 'text-emerald-600' : 'text-rose-600'}">₹${Number(t.amount).toLocaleString('en-IN')}</td>
-          <td class="py-3 text-slate-500 max-w-xs truncate">${t.notes || '-'}</td>
-          <td class="py-3 text-right whitespace-nowrap space-x-3">
-            <button onclick="openEditModal('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs">Edit</button>
-            <button onclick="deleteTx('${t.id}')" class="text-rose-500 hover:text-rose-700 font-semibold text-xs">Delete</button>
-          </td>
+        // Align PAID to the right (Red), RECEIVED to the left (Green) like Screenshots 3 & 5
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex w-full ${isPaid ? 'justify-end' : 'justify-start'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `w-[68%] rounded-xl p-3.5 card-dark cursor-pointer transition border ${
+          isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-slate-800/90' : 'border-transparent'
+        }`;
+        bubble.onclick = (e) => {
+          e.stopPropagation();
+          selectTransactionBubble(t.id);
+        };
+
+        bubble.innerHTML = `
+          <p class="font-bold text-base ${isPaid ? 'text-rose-500' : 'text-emerald-400'}">
+            ${isPaid ? '-₹' : '₹'}${formattedAmt}
+          </p>
+          <p class="text-white text-xs mt-1 break-words">${t.notes || 'No description'}</p>
+          <p class="text-[11px] text-slate-400 mt-1">
+            ${isPaid ? 'Paid on' : 'Received on'} ${formatDisplayDate(t.date)}
+          </p>
         `;
-        tbody.appendChild(tr);
+
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
       });
     }
 
-    function closeLedgerModal() {
-      activePerson = null;
-      document.getElementById('ledgerModal').classList.add('hidden');
+    function selectTransactionBubble(txId) {
+      selectedBubbleTxId = (selectedBubbleTxId === txId) ? null : txId;
+      const actionsEl = document.getElementById('selectedTxActions');
+      if (selectedBubbleTxId) {
+        actionsEl.classList.remove('hidden');
+        actionsEl.classList.add('flex');
+      } else {
+        actionsEl.classList.add('hidden');
+        actionsEl.classList.remove('flex');
+      }
+      if (activePerson) renderPersonChatLedger(activePerson);
     }
 
-    // 4. Handle Add / Edit Modal
-    function openEntryModal() {
-      document.getElementById('entryModalTitle').innerText = 'New Transaction';
-      document.getElementById('txId').value = '';
-      document.getElementById('txPerson').value = '';
-      document.getElementById('txType').value = 'GAVE';
-      document.getElementById('txAmount').value = '';
-      document.getElementById('txDate').valueAsDate = new Date();
-      document.getElementById('txNotes').value = '';
-      document.getElementById('entryModal').classList.remove('hidden');
-    }
-
-    function openEntryModalForActivePerson() {
-      openEntryModal();
-      if (activePerson) {
-        document.getElementById('txPerson').value = activePerson;
+    function clearBubbleSelection(e) {
+      if (selectedBubbleTxId) {
+        selectedBubbleTxId = null;
+        document.getElementById('selectedTxActions').classList.add('hidden');
+        if (activePerson) renderPersonChatLedger(activePerson);
       }
     }
 
-    function openEditModal(txId) {
-      const tx = allTransactions.find(t => t.id === txId);
+    // 4. Add / Edit Transaction Screen & Smart Contact Autocomplete (Screenshots 1 & 2)
+    function setTxType(type) {
+      currentTxType = type;
+      const btnRec = document.getElementById('btnReceived');
+      const btnPaid = document.getElementById('btnPaid');
+      const dotRec = document.querySelector('#radioReceived span');
+      const dotPaid = document.querySelector('#radioPaid span');
+      const currSym = document.getElementById('currencySymbol');
+
+      if (type === 'RECEIVED') {
+        btnRec.className = "py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition bg-blue-500 text-white border border-blue-500";
+        btnPaid.className = "py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition bg-slate-200 text-slate-800 border border-slate-200";
+        dotRec.classList.remove('hidden');
+        dotPaid.classList.add('hidden');
+        currSym.className = "text-emerald-400 font-semibold text-lg";
+      } else {
+        btnPaid.className = "py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition bg-blue-500 text-white border border-blue-500";
+        btnRec.className = "py-3.5 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition bg-slate-200 text-slate-800 border border-slate-200";
+        dotPaid.classList.remove('hidden');
+        dotRec.classList.add('hidden');
+        currSym.className = "text-rose-400 font-semibold text-lg";
+      }
+    }
+
+    function openAddTransactionModal(prefillPerson = null) {
+      document.getElementById('txModalHeaderTitle').innerText = 'Add Transaction';
+      document.getElementById('editTxId').value = '';
+      document.getElementById('inputAmount').value = '';
+      document.getElementById('inputDate').valueAsDate = new Date();
+      document.getElementById('inputNotes').value = '';
+      document.getElementById('inputContactName').value = prefillPerson || '';
+      document.getElementById('contactMatchStatus').classList.add('hidden');
+      setTxType('RECEIVED');
+
+      document.getElementById('addTxScreen').classList.remove('hidden');
+      document.getElementById('addTxScreen').classList.add('flex');
+    }
+
+    function closeAddTransactionModal() {
+      document.getElementById('addTxScreen').classList.add('hidden');
+      document.getElementById('addTxScreen').classList.remove('flex');
+      document.getElementById('contactSuggestionsDropdown').classList.add('hidden');
+    }
+
+    // Smart Autocomplete Dropdown (Matches Screenshot 2 & Prevents Duplicate Names)
+    function showContactSuggestions() {
+      const input = document.getElementById('inputContactName');
+      const dropdown = document.getElementById('contactSuggestionsDropdown');
+      const badge = document.getElementById('contactMatchStatus');
+      const rawVal = input.value.trim();
+      const lowerVal = rawVal.toLowerCase();
+
+      dropdown.innerHTML = '';
+
+      const matches = uniqueContacts.filter(name => name.toLowerCase().includes(lowerVal));
+      const exactMatch = uniqueContacts.find(name => name.toLowerCase() === lowerVal);
+
+      // Update indicator badge inside input
+      if (rawVal.length > 0) {
+        badge.classList.remove('hidden');
+        if (exactMatch) {
+          badge.innerText = 'Existing Contact';
+          badge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 whitespace-nowrap';
+        } else {
+          badge.innerText = 'New Contact Tile';
+          badge.className = 'text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 whitespace-nowrap';
+        }
+      } else {
+        badge.classList.add('hidden');
+      }
+
+      if (matches.length === 0 && !rawVal) {
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      dropdown.classList.remove('hidden');
+
+      // Render matching existing contacts
+      matches.forEach(name => {
+        const item = document.createElement('div');
+        item.className = "px-4 py-3 text-sm text-white hover:bg-slate-800 cursor-pointer flex justify-between items-center";
+        item.onclick = () => {
+          input.value = name; // Snap to exact existing name
+          dropdown.classList.add('hidden');
+          badge.innerText = 'Existing Contact';
+          badge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 whitespace-nowrap';
+          badge.classList.remove('hidden');
+        };
+        item.innerHTML = `<span>${name}</span>`;
+        dropdown.appendChild(item);
+      });
+
+      // If no exact match exists, show option to create a new contact tile
+      if (rawVal && !exactMatch) {
+        const createItem = document.createElement('div');
+        createItem.className = "px-4 py-3 text-xs text-blue-400 hover:bg-slate-800 cursor-pointer font-medium";
+        createItem.onclick = () => {
+          dropdown.classList.add('hidden');
+        };
+        createItem.innerText = `+ Create new contact tile "${rawVal}"`;
+        dropdown.appendChild(createItem);
+      }
+    }
+
+    function editSelectedBubble() {
+      if (!selectedBubbleTxId) return;
+      const tx = allTransactions.find(t => t.id === selectedBubbleTxId);
       if (!tx) return;
 
-      document.getElementById('entryModalTitle').innerText = 'Edit Transaction';
-      document.getElementById('txId').value = tx.id;
-      document.getElementById('txPerson').value = tx.person;
-      document.getElementById('txType').value = tx.type;
-      document.getElementById('txAmount').value = tx.amount;
-      document.getElementById('txDate').value = tx.date;
-      document.getElementById('txNotes').value = tx.notes;
-      document.getElementById('entryModal').classList.remove('hidden');
+      document.getElementById('txModalHeaderTitle').innerText = 'Edit Transaction';
+      document.getElementById('editTxId').value = tx.id;
+      document.getElementById('inputAmount').value = tx.amount;
+      document.getElementById('inputDate').value = tx.date;
+      document.getElementById('inputNotes').value = tx.notes;
+      document.getElementById('inputContactName').value = tx.person;
+      setTxType(tx.type);
+
+      document.getElementById('addTxScreen').classList.remove('hidden');
+      document.getElementById('addTxScreen').classList.add('flex');
     }
 
-    function closeEntryModal() {
-      document.getElementById('entryModal').classList.add('hidden');
+    async function deleteSelectedBubble() {
+      if (!selectedBubbleTxId) return;
+      if (!confirm('Delete this transaction permanently?')) return;
+
+      const idToDelete = selectedBubbleTxId;
+      selectedBubbleTxId = null;
+      document.getElementById('selectedTxActions').classList.add('hidden');
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'delete', id: idToDelete })
+        });
+        await fetchAllData();
+      } catch (err) {
+        alert('Failed to delete: ' + err.message);
+      }
     }
 
-    // 5. Save (Add or Edit) via Fetch POST
-    async function saveTransaction(e) {
-      e.preventDefault();
-      const saveBtn = document.getElementById('saveBtn');
+    // 5. Save Transaction (Enforces Canonical Name so Duplicate Tiles Never Happen)
+    async function submitTransactionForm() {
+      const amount = parseFloat(document.getElementById('inputAmount').value);
+      const date = document.getElementById('inputDate').value;
+      const notes = document.getElementById('inputNotes').value.trim();
+      let rawPerson = document.getElementById('inputContactName').value.trim();
+      const editId = document.getElementById('editTxId').value;
+
+      if (!amount || amount <= 0) {
+        alert('Please enter a valid amount.');
+        return;
+      }
+      if (!rawPerson) {
+        alert('Please select or enter a Contact Name.');
+        return;
+      }
+
+      // Snap to existing contact name if case-insensitive match exists
+      const existingMatch = uniqueContacts.find(c => c.toLowerCase() === rawPerson.toLowerCase());
+      const finalPersonName = existingMatch ? existingMatch : rawPerson;
+
+      const saveBtn = document.getElementById('saveTxTopBtn');
+      saveBtn.innerText = 'SAVING...';
       saveBtn.disabled = true;
-      saveBtn.innerText = 'Saving...';
 
-      const id = document.getElementById('txId').value;
       const payload = {
-        action: id ? 'edit' : 'add',
-        id: id,
-        person: document.getElementById('txPerson').value.trim(),
-        type: document.getElementById('txType').value,
-        amount: parseFloat(document.getElementById('txAmount').value),
-        date: document.getElementById('txDate').value,
-        notes: document.getElementById('txNotes').value.trim()
+        action: editId ? 'edit' : 'add',
+        id: editId,
+        person: finalPersonName,
+        type: currentTxType, // 'PAID' or 'RECEIVED'
+        amount: amount,
+        date: date,
+        notes: notes
       };
 
       try {
@@ -382,30 +695,77 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        closeEntryModal();
+        closeAddTransactionModal();
+        selectedBubbleTxId = null;
+        document.getElementById('selectedTxActions').classList.add('hidden');
         await fetchAllData();
       } catch (err) {
         alert('Error saving transaction: ' + err.message);
       } finally {
+        saveBtn.innerText = 'SAVE';
         saveBtn.disabled = false;
-        saveBtn.innerText = 'Save Transaction';
       }
     }
 
-    // 6. Delete Transaction via Fetch POST
-    async function deleteTx(txId) {
-      if (!confirm('Delete this transaction permanently?')) return;
+    // 6. All Transactions Tab & Helpers
+    function renderAllTransactionsTab() {
+      const container = document.getElementById('allTxList');
+      container.innerHTML = '';
 
-      try {
-        await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'delete', id: txId })
-        });
-        await fetchAllData();
-      } catch (err) {
-        alert('Error deleting transaction: ' + err.message);
+      if (allTransactions.length === 0) {
+        container.innerHTML = `<div class="p-8 card-dark rounded-xl text-center text-slate-500 text-sm">No transactions recorded yet.</div>`;
+        return;
       }
+
+      const sorted = [...allTransactions].reverse();
+      sorted.forEach(t => {
+        const isPaid = t.type === 'PAID';
+        const item = document.createElement('div');
+        item.className = "card-dark p-3.5 rounded-xl flex justify-between items-center cursor-pointer";
+        item.onclick = () => openPersonLedger(t.person);
+        item.innerHTML = `
+          <div>
+            <h4 class="text-sm font-medium text-white">${t.person}</h4>
+            <p class="text-xs text-slate-400">${t.notes || 'No description'} • ${formatDisplayDate(t.date)}</p>
+          </div>
+          <span class="text-sm font-bold ${isPaid ? 'text-rose-500' : 'text-emerald-400'}">
+            ${isPaid ? '-₹' : '+₹'}${Number(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+          </span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function switchTab(tab) {
+      const homeView = document.getElementById('homeView');
+      const txView = document.getElementById('allTxView');
+      const homeBtn = document.getElementById('navHomeBtn');
+      const txBtn = document.getElementById('navTxBtn');
+
+      if (tab === 'home') {
+        homeView.classList.remove('hidden');
+        txView.classList.add('hidden');
+        homeBtn.className = "flex flex-col items-center gap-1 text-white";
+        txBtn.className = "flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300";
+      } else {
+        homeView.classList.add('hidden');
+        txView.classList.remove('hidden');
+        txBtn.className = "flex flex-col items-center gap-1 text-white";
+        homeBtn.className = "flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300";
+      }
+    }
+
+    function toggleSearch() {
+      const wrap = document.getElementById('searchBarWrap');
+      wrap.classList.toggle('hidden');
+      if (!wrap.classList.contains('hidden')) {
+        document.getElementById('contactSearchInput').focus();
+      }
+    }
+
+    function toggleSortOrder() {
+      sortAscending = !sortAscending;
+      renderHomeDashboard();
     }
   </script>
 </body>
