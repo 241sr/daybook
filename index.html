@@ -14,7 +14,6 @@
     }
     .card-dark { background-color: #161821; }
     .card-darker { background-color: #1c1f2b; }
-    /* Hide scrollbar for clean mobile look */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #000000; }
     ::-webkit-scrollbar-thumb { background: #2d3142; border-radius: 2px; }
@@ -24,67 +23,75 @@
 
   <!-- Mobile App Container -->
   <div class="w-full max-w-md min-h-screen bg-black flex flex-col relative pb-20 select-none">
+
     <!-- ==================== LOCK SCREEN (PASSWORD & OTP AUTH) ==================== -->
-<div id="authScreen" class="fixed inset-0 max-w-md mx-auto bg-black z-50 flex flex-col justify-center p-6">
-  <div class="card-dark rounded-2xl p-6 border border-slate-800 shadow-2xl">
-    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 mx-auto">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-      </svg>
+    <div id="authScreen" class="fixed inset-0 max-w-md mx-auto bg-black z-50 flex flex-col justify-center p-6">
+      <div class="card-dark rounded-2xl p-6 border border-slate-800 shadow-2xl">
+        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 mx-auto">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-center text-white mb-1">Sree Ledger Locked</h2>
+        <p class="text-xs text-slate-400 text-center mb-6">Verify your identity to access transactions</p>
+
+        <!-- Auth Mode Tabs -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-black rounded-xl mb-5 border border-slate-800">
+          <button type="button" onclick="switchAuthTab('password')" id="tabPassBtn" class="py-2 text-xs font-semibold rounded-lg bg-blue-500 text-white transition">
+            Password
+          </button>
+          <button type="button" onclick="switchAuthTab('otp')" id="tabOtpBtn" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+            Email OTP
+          </button>
+        </div>
+
+        <!-- Mode 1: Username & Password -->
+        <form id="passwordAuthForm" onsubmit="loginWithPassword(event)" class="space-y-3.5">
+          <input type="text" id="loginUser" required placeholder="Username" autocomplete="username"
+            class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
+          <input type="password" id="loginPass" required placeholder="Password or PIN" autocomplete="current-password"
+            class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
+          <button type="submit" id="loginPassBtn" class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
+            Unlock Ledger
+          </button>
+        </form>
+
+        <!-- Mode 2: Email OTP -->
+        <div id="otpAuthForm" class="hidden space-y-3.5">
+          <button type="button" onclick="requestEmailOtp()" id="sendOtpBtn"
+            class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 font-medium rounded-xl text-xs transition">
+            Send 6-Digit OTP to Email
+          </button>
+          <input type="number" id="loginOtpInput" placeholder="Enter 6-digit OTP"
+            class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-center tracking-widest text-base font-bold text-white focus:outline-none focus:border-blue-500">
+          <button type="button" onclick="verifyEmailOtp()" id="verifyOtpBtn"
+            class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
+            Verify & Unlock
+          </button>
+        </div>
+
+        <p id="authErrorMsg" class="text-xs text-rose-400 text-center mt-4 hidden"></p>
+      </div>
     </div>
-    <h2 class="text-xl font-bold text-center text-white mb-1">Sree Ledger Locked</h2>
-    <p class="text-xs text-slate-400 text-center mb-6">Verify your identity to access transactions</p>
-
-    <!-- Auth Mode Tabs -->
-    <div class="grid grid-cols-2 gap-2 p-1 bg-black rounded-xl mb-5 border border-slate-800">
-      <button onclick="switchAuthTab('password')" id="tabPassBtn" class="py-2 text-xs font-semibold rounded-lg bg-blue-500 text-white transition">
-        Password
-      </button>
-      <button onclick="switchAuthTab('otp')" id="tabOtpBtn" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
-        Email OTP
-      </button>
-    </div>
-
-    <!-- Mode 1: Username & Password -->
-    <form id="passwordAuthForm" onsubmit="loginWithPassword(event)" class="space-y-3.5">
-      <input type="text" id="loginUser" required placeholder="Username"
-        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
-      <input type="password" id="loginPass" required placeholder="Password or PIN"
-        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
-      <button type="submit" id="loginPassBtn" class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
-        Unlock Ledger
-      </button>
-    </form>
-
-    <!-- Mode 2: Email OTP -->
-    <div id="otpAuthForm" class="hidden space-y-3.5">
-      <button type="button" onclick="requestEmailOtp()" id="sendOtpBtn"
-        class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 font-medium rounded-xl text-xs transition">
-        Send 6-Digit OTP to Email
-      </button>
-      <input type="number" id="loginOtpInput" placeholder="Enter 6-digit OTP"
-        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-center tracking-widest text-base font-bold text-white focus:outline-none focus:border-blue-500">
-      <button type="button" onclick="verifyEmailOtp()" id="verifyOtpBtn"
-        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
-        Verify & Unlock
-      </button>
-    </div>
-
-    <p id="authErrorMsg" class="text-xs text-rose-400 text-center mt-4 hidden"></p>
-  </div>
-</div>
 
     <!-- ==================== VIEW 1: HOME DASHBOARD ==================== -->
     <div id="homeView" class="flex-1 flex flex-col p-4">
       
-      <!-- Top Bar -->
+      <!-- Top Bar with Sync & Lock Buttons -->
       <div class="flex justify-between items-center py-2 mb-4">
         <h1 class="text-xl font-semibold tracking-wide text-white">Sree</h1>
-        <button onclick="fetchAllData()" title="Sync Now" class="text-slate-300 hover:text-white p-1">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-        </button>
+        <div class="flex items-center gap-3">
+          <button onclick="fetchAllData()" title="Sync Now" class="text-slate-300 hover:text-white p-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+          <button onclick="logoutLedger()" title="Lock Ledger" class="text-slate-300 hover:text-rose-400 p-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Summary Banner (To Be Received / To Be Paid) -->
@@ -181,7 +188,7 @@
           <h3 id="ledgerPersonName" class="font-semibold text-base text-white truncate max-w-[160px]">Person Name</h3>
         </div>
 
-        <!-- Contextual Action Icons (Hidden until a transaction card is clicked) -->
+        <!-- Contextual Action Icons -->
         <div class="flex items-center gap-4">
           <div id="selectedTxActions" class="hidden items-center gap-4">
             <button onclick="editSelectedBubble()" title="Edit" class="text-slate-200 hover:text-blue-400">
@@ -199,9 +206,7 @@
       </div>
 
       <!-- Chat Bubbles Scroll Area -->
-      <div id="chatBubblesContainer" onclick="clearBubbleSelection(event)" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
-        <!-- Populated dynamically -->
-      </div>
+      <div id="chatBubblesContainer" onclick="clearBubbleSelection(event)" class="flex-1 overflow-y-auto p-4 space-y-3 pb-24"></div>
 
       <!-- Bottom Balance Pill & Floating + Button -->
       <div class="fixed bottom-4 left-0 right-0 max-w-md mx-auto px-4 flex justify-center items-center pointer-events-none">
@@ -275,12 +280,9 @@
           class="w-full bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none resize-none"></textarea>
       </div>
 
-      <!-- Contact Name Input with Floating Upward/Downward Suggestion Box -->
+      <!-- Contact Name Input with Floating Suggestion Box -->
       <div class="relative">
-        <!-- Floating Suggestion Box (Matches Screenshot 2) -->
-        <div id="contactSuggestionsDropdown" class="hidden absolute left-0 right-0 bottom-full mb-2 card-darker rounded-xl shadow-2xl border border-slate-700/80 max-h-60 overflow-y-auto z-50 divide-y divide-slate-800/60">
-          <!-- Populated dynamically -->
-        </div>
+        <div id="contactSuggestionsDropdown" class="hidden absolute left-0 right-0 bottom-full mb-2 card-darker rounded-xl shadow-2xl border border-slate-700/80 max-h-60 overflow-y-auto z-50 divide-y divide-slate-800/60"></div>
 
         <div class="card-dark rounded-xl px-3.5 py-3.5 flex items-center gap-3 border border-slate-800 focus-within:border-blue-500">
           <svg class="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,14 +302,15 @@
   </div>
 
   <script>
-    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
-    const API_URL = "https://script.google.com/macros/s/AKfycbyWZ322BqPEIEWwLnIafz5fmrE7ovQKZ9MXv0qNGSpFP47aihji3xWRANBCJl46GZ6EMA/exec";
+    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL BELOW
+    const API_URL = "https://script.google.com/macros/s/AKfycbxPCHwkkp7V9UQTtaIVC9JTOEd-yXAMeJ9ccQomD9WHfEcORNJKjEfNWkJYEdkpm6UWiw/exec";
 
+    let sessionToken = localStorage.getItem('sree_ledger_token') || '';
     let allTransactions = [];
-    let uniqueContacts = []; // Canonical contact names
+    let uniqueContacts = [];
     let activePerson = null;
     let selectedBubbleTxId = null;
-    let currentTxType = 'RECEIVED'; // 'RECEIVED' or 'PAID'
+    let currentTxType = 'RECEIVED';
     let sortAscending = true;
 
     const AVATAR_COLORS = [
@@ -318,9 +321,12 @@
     window.onload = () => {
       document.getElementById('inputDate').valueAsDate = new Date();
       setTxType('RECEIVED');
-      fetchAllData();
 
-      // Close suggestion box when clicking outside
+      if (sessionToken) {
+        document.getElementById('authScreen').classList.add('hidden');
+        fetchAllData();
+      }
+
       document.addEventListener('click', (e) => {
         const dropdown = document.getElementById('contactSuggestionsDropdown');
         const input = document.getElementById('inputContactName');
@@ -330,6 +336,140 @@
       });
     };
 
+    // ==================== AUTHENTICATION LOGIC ====================
+    function switchAuthTab(mode) {
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      if (mode === 'password') {
+        document.getElementById('passwordAuthForm').classList.remove('hidden');
+        document.getElementById('otpAuthForm').classList.add('hidden');
+        document.getElementById('tabPassBtn').className = "py-2 text-xs font-semibold rounded-lg bg-blue-500 text-white transition";
+        document.getElementById('tabOtpBtn').className = "py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+      } else {
+        document.getElementById('passwordAuthForm').classList.add('hidden');
+        document.getElementById('otpAuthForm').classList.remove('hidden');
+        document.getElementById('tabOtpBtn').className = "py-2 text-xs font-semibold rounded-lg bg-blue-500 text-white transition";
+        document.getElementById('tabPassBtn').className = "py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+      }
+    }
+
+    function showAuthError(msg) {
+      const errEl = document.getElementById('authErrorMsg');
+      errEl.innerText = msg;
+      errEl.classList.remove('hidden');
+    }
+
+    async function loginWithPassword(e) {
+      e.preventDefault();
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      const btn = document.getElementById('loginPassBtn');
+      btn.innerText = 'Verifying...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'loginPassword',
+            username: document.getElementById('loginUser').value,
+            password: document.getElementById('loginPass').value
+          })
+        });
+        const data = await res.json();
+        if (data.status === 'success' && data.token) {
+          sessionToken = data.token;
+          localStorage.setItem('sree_ledger_token', sessionToken);
+          document.getElementById('loginPass').value = '';
+          document.getElementById('authScreen').classList.add('hidden');
+          fetchAllData();
+        } else {
+          showAuthError(data.message || 'Invalid username or password.');
+        }
+      } catch (err) {
+        showAuthError('Connection failed. Check API_URL in index.html.');
+      } finally {
+        btn.innerText = 'Unlock Ledger';
+        btn.disabled = false;
+      }
+    }
+
+    async function requestEmailOtp() {
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      const btn = document.getElementById('sendOtpBtn');
+      btn.innerText = 'Sending OTP...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'sendOtp' })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          btn.innerText = 'OTP Sent! Check your Email';
+        } else {
+          showAuthError(data.message || 'Could not send OTP.');
+          btn.innerText = 'Send 6-Digit OTP to Email';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showAuthError('Network error sending OTP.');
+        btn.innerText = 'Send 6-Digit OTP to Email';
+        btn.disabled = false;
+      }
+    }
+
+    async function verifyEmailOtp() {
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      const otp = document.getElementById('loginOtpInput').value;
+      if (!otp) return showAuthError('Please enter the 6-digit OTP.');
+
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.innerText = 'Checking...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'verifyOtp', otp: otp })
+        });
+        const data = await res.json();
+        if (data.status === 'success' && data.token) {
+          sessionToken = data.token;
+          localStorage.setItem('sree_ledger_token', sessionToken);
+          document.getElementById('loginOtpInput').value = '';
+          document.getElementById('authScreen').classList.add('hidden');
+          fetchAllData();
+        } else {
+          showAuthError(data.message || 'Invalid or expired OTP.');
+        }
+      } catch (err) {
+        showAuthError('Verification failed.');
+      } finally {
+        btn.innerText = 'Verify & Unlock';
+        btn.disabled = false;
+      }
+    }
+
+    function logoutLedger() {
+      if (sessionToken) {
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'logout', token: sessionToken })
+        }).catch(() => {});
+      }
+      localStorage.removeItem('sree_ledger_token');
+      sessionToken = '';
+      allTransactions = [];
+      closePersonLedger();
+      closeAddTransactionModal();
+      document.getElementById('authScreen').classList.remove('hidden');
+    }
+
+    // ==================== CORE LEDGER LOGIC ====================
     function getAvatarColor(name) {
       let hash = 0;
       for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -343,14 +483,24 @@
       return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
-    // 1. Fetch All Transactions from Google Sheets
     async function fetchAllData() {
+      if (!sessionToken) {
+        document.getElementById('authScreen').classList.remove('hidden');
+        return;
+      }
+
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(`${API_URL}?token=${encodeURIComponent(sessionToken)}`);
         const data = await res.json();
+
+        if (data.status === 'unauthorized') {
+          logoutLedger();
+          showAuthError('Session expired. Please unlock again.');
+          return;
+        }
+
         allTransactions = (data.transactions || []).map(t => ({
           ...t,
-          // Support legacy GAVE/GOT or new PAID/RECEIVED
           type: (t.type === 'GAVE' || t.type === 'PAID') ? 'PAID' : 'RECEIVED'
         }));
         extractCanonicalContacts();
@@ -365,7 +515,6 @@
       }
     }
 
-    // Build case-insensitive canonical contact list
     function extractCanonicalContacts() {
       const map = new Map();
       allTransactions.forEach(t => {
@@ -378,7 +527,6 @@
       uniqueContacts = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
     }
 
-    // 2. Render Home Screen (Summary & Contact Tiles)
     function renderHomeDashboard() {
       const listEl = document.getElementById('contactsList');
       const searchQuery = (document.getElementById('contactSearchInput')?.value || '').trim().toLowerCase();
@@ -391,8 +539,6 @@
         if (!peopleMap[lower]) {
           peopleMap[lower] = { name: t.person.trim(), net: 0, count: 0 };
         }
-        // PAID = You gave/lent money -> Positive (You'll get)
-        // RECEIVED = You received/borrowed money -> Negative (You'll pay)
         if (t.type === 'PAID') {
           peopleMap[lower].net += Number(t.amount);
         } else {
@@ -403,7 +549,6 @@
 
       let contactsArray = Object.values(peopleMap);
 
-      // Calculate Top Banner Totals
       let totalToReceive = 0;
       let totalToPay = 0;
       contactsArray.forEach(c => {
@@ -415,7 +560,6 @@
       document.getElementById('totalToPay').innerText = `₹${totalToPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       document.getElementById('activeContactsCount').innerText = `Active Contacts (${contactsArray.length})`;
 
-      // Filter & Sort
       if (searchQuery) {
         contactsArray = contactsArray.filter(c => c.name.toLowerCase().includes(searchQuery));
       }
@@ -431,7 +575,6 @@
         const isGet = person.net >= 0;
         const formattedAmt = Math.abs(person.net).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        // Matches Screenshot 4 styling (-₹137.00 Green "You'll get" vs Red "You'll pay")
         const amountHtml = isGet
           ? `<span class="text-emerald-400 font-semibold text-sm">-₹${formattedAmt}</span>
              <span class="text-[11px] italic text-slate-300">You'll get</span>`
@@ -460,7 +603,6 @@
       });
     }
 
-    // 3. Open Person Chat-Bubble Ledger (Matches Screenshots 3 & 5)
     function openPersonLedger(personName) {
       activePerson = personName;
       selectedBubbleTxId = null;
@@ -496,11 +638,7 @@
 
       const pill = document.getElementById('personNetPill');
       const absNet = Math.abs(net).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      if (net >= 0) {
-        pill.innerText = `You'll get -₹${absNet}`;
-      } else {
-        pill.innerText = `You'll pay ₹${absNet}`;
-      }
+      pill.innerText = net >= 0 ? `You'll get -₹${absNet}` : `You'll pay ₹${absNet}`;
 
       if (personTx.length === 0) {
         container.innerHTML = `<div class="text-center text-slate-500 text-sm py-12">No transactions with ${personName} yet.</div>`;
@@ -512,7 +650,6 @@
         const isSelected = selectedBubbleTxId === t.id;
         const formattedAmt = Number(t.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        // Align PAID to the right (Red), RECEIVED to the left (Green) like Screenshots 3 & 5
         const wrapper = document.createElement('div');
         wrapper.className = `flex w-full ${isPaid ? 'justify-end' : 'justify-start'}`;
 
@@ -553,7 +690,7 @@
       if (activePerson) renderPersonChatLedger(activePerson);
     }
 
-    function clearBubbleSelection(e) {
+    function clearBubbleSelection() {
       if (selectedBubbleTxId) {
         selectedBubbleTxId = null;
         document.getElementById('selectedTxActions').classList.add('hidden');
@@ -561,7 +698,6 @@
       }
     }
 
-    // 4. Add / Edit Transaction Screen & Smart Contact Autocomplete (Screenshots 1 & 2)
     function setTxType(type) {
       currentTxType = type;
       const btnRec = document.getElementById('btnReceived');
@@ -605,7 +741,6 @@
       document.getElementById('contactSuggestionsDropdown').classList.add('hidden');
     }
 
-    // Smart Autocomplete Dropdown (Matches Screenshot 2 & Prevents Duplicate Names)
     function showContactSuggestions() {
       const input = document.getElementById('inputContactName');
       const dropdown = document.getElementById('contactSuggestionsDropdown');
@@ -618,7 +753,6 @@
       const matches = uniqueContacts.filter(name => name.toLowerCase().includes(lowerVal));
       const exactMatch = uniqueContacts.find(name => name.toLowerCase() === lowerVal);
 
-      // Update indicator badge inside input
       if (rawVal.length > 0) {
         badge.classList.remove('hidden');
         if (exactMatch) {
@@ -639,12 +773,11 @@
 
       dropdown.classList.remove('hidden');
 
-      // Render matching existing contacts
       matches.forEach(name => {
         const item = document.createElement('div');
         item.className = "px-4 py-3 text-sm text-white hover:bg-slate-800 cursor-pointer flex justify-between items-center";
         item.onclick = () => {
-          input.value = name; // Snap to exact existing name
+          input.value = name;
           dropdown.classList.add('hidden');
           badge.innerText = 'Existing Contact';
           badge.className = 'text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 whitespace-nowrap';
@@ -654,7 +787,6 @@
         dropdown.appendChild(item);
       });
 
-      // If no exact match exists, show option to create a new contact tile
       if (rawVal && !exactMatch) {
         const createItem = document.createElement('div');
         createItem.className = "px-4 py-3 text-xs text-blue-400 hover:bg-slate-800 cursor-pointer font-medium";
@@ -692,18 +824,19 @@
       document.getElementById('selectedTxActions').classList.add('hidden');
 
       try {
-        await fetch(API_URL, {
+        const res = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'delete', id: idToDelete })
+          body: JSON.stringify({ action: 'delete', id: idToDelete, token: sessionToken })
         });
+        const data = await res.json();
+        if (data.status === 'unauthorized') return logoutLedger();
         await fetchAllData();
       } catch (err) {
         alert('Failed to delete: ' + err.message);
       }
     }
 
-    // 5. Save Transaction (Enforces Canonical Name so Duplicate Tiles Never Happen)
     async function submitTransactionForm() {
       const amount = parseFloat(document.getElementById('inputAmount').value);
       const date = document.getElementById('inputDate').value;
@@ -720,7 +853,6 @@
         return;
       }
 
-      // Snap to existing contact name if case-insensitive match exists
       const existingMatch = uniqueContacts.find(c => c.toLowerCase() === rawPerson.toLowerCase());
       const finalPersonName = existingMatch ? existingMatch : rawPerson;
 
@@ -730,20 +862,24 @@
 
       const payload = {
         action: editId ? 'edit' : 'add',
+        token: sessionToken,
         id: editId,
         person: finalPersonName,
-        type: currentTxType, // 'PAID' or 'RECEIVED'
+        type: currentTxType,
         amount: amount,
         date: date,
         notes: notes
       };
 
       try {
-        await fetch(API_URL, {
+        const res = await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
+        const data = await res.json();
+        if (data.status === 'unauthorized') return logoutLedger();
+
         closeAddTransactionModal();
         selectedBubbleTxId = null;
         document.getElementById('selectedTxActions').classList.add('hidden');
@@ -756,7 +892,6 @@
       }
     }
 
-    // 6. All Transactions Tab & Helpers
     function renderAllTransactionsTab() {
       const container = document.getElementById('allTxList');
       container.innerHTML = '';
