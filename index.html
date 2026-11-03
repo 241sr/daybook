@@ -1,469 +1,195 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
+  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal IOU & Ledger Tracker</title>
-  <style>
-    :root { --bg: #f8fafc; --card: #ffffff; --primary: #0f172a; --accent: #4f46e5; --danger: #ef4444; --success: #10b981; --warn: #f59e0b; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--primary); max-width: 900px; margin: 1.5rem auto; padding: 0 1rem; }
-    
-    /* Layout & Buttons */
-    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.25rem; }
-    .btn-group { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-    .btn { background: var(--accent); color: white; border: none; padding: 0.65rem 1.1rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
-    .btn-outline { background: white; color: var(--primary); border: 1px solid #cbd5e1; }
-    .btn:disabled { background: #94a3b8; cursor: not-allowed; }
-    
-    /* Forms & Panels */
-    .panel { background: var(--card); padding: 1.35rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 1.75rem; transition: border 0.2s, background 0.2s; }
-    .panel.editing-mode { border: 2px solid var(--warn); background: #fffbeb; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    label { font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 0.3rem;}
-    input, select { width: 100%; padding: 0.6rem; margin-bottom: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
-    .form-actions { display: flex; gap: 0.6rem; margin-top: 0.5rem; }
-    .submit-btn { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; padding: 0.7rem; flex: 1; border-radius: 6px; }
-    .submit-btn.update-btn { background: var(--warn); }
-    .cancel-btn { display: none; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; padding: 0.7rem 1rem; }
-    
-    /* Drawers */
-    .manage-drawer { display: none; background: #f1f5f9; padding: 1.1rem; border-radius: 10px; margin-bottom: 1.25rem; border: 1px solid #e2e8f0;}
-    .manage-drawer.open { display: block; }
-    .manage-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.75rem; align-items: end; }
-    
-    /* Person Cards Dashboard */
-    .section-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 1rem 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .person-card { background: var(--card); padding: 1.15rem; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; border-top: 4px solid var(--primary); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-    .person-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
-    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
-    .person-card h4 { margin: 0; color: #1e293b; font-size: 1.05rem; }
-    .group-tag { font-size: 0.65rem; font-weight: 600; color: #475569; background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; display: inline-block; margin-top: 0.2rem; }
-    .del-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.9rem; line-height: 1; }
-    .del-btn:hover { color: var(--danger); }
-    
-    /* Balance Colors */
-    .bal-positive { color: var(--success); } /* They owe you */
-    .bal-negative { color: var(--danger); } /* You owe them */
-    .bal-settled { color: #64748b; }
-    .net-balance { font-size: 1.3rem; font-weight: 700; margin: 0.5rem 0; }
-    .status-badge { font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; }
-    .bg-pos { background: #d1fae5; color: #047857; }
-    .bg-neg { background: #fee2e2; color: #b91c1c; }
-    .bg-neu { background: #f1f5f9; color: #475569; }
-
-    /* Modal Overlay & Content */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(2px); z-index: 100; align-items: center; justify-content: center; }
-    .modal-overlay.open { display: flex; }
-    .modal-content { background: #fff; width: 90%; max-width: 550px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; animation: slideUp 0.2s ease-out; }
-    @keyframes slideUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal-header { padding: 1.25rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
-    .modal-header h3 { margin: 0; font-size: 1.25rem; }
-    .modal-close { background: #e2e8f0; border: none; border-radius: 50%; width: 32px; height: 32px; font-weight: bold; cursor: pointer; color: #334155; }
-    .modal-close:hover { background: #cbd5e1; }
-    .modal-body { padding: 1.25rem; overflow-y: auto; }
-    .modal-summary { text-align: center; margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;}
-    
-    /* Transaction List inside Modal */
-    .tx-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
-    .tx-row:last-child { border-bottom: none; }
-    .tx-left { display: flex; flex-direction: column; gap: 0.2rem; }
-    .tx-date { font-size: 0.75rem; color: #64748b; }
-    .tx-right { display: flex; align-items: center; gap: 0.75rem; }
-    .amt-given { color: var(--success); font-weight: 700; }
-    .amt-received { color: var(--danger); font-weight: 700; }
-    .action-icons { display: flex; gap: 0.3rem; }
-    .icon-btn { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; font-size: 0.8rem; padding: 0.3rem 0.4rem; color: #475569; }
-    .icon-btn:hover { background: #e2e8f0; color: var(--primary); }
-
-    @media (max-width: 650px) { .form-row, .manage-grid { grid-template-columns: 1fr; } }
-  </style>
+  <title>Person Ledger Dashboard</title>
+  <!-- Tailwind CSS for modern responsive design -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-6">
 
-  <!-- Top Bar -->
-  <div class="header-bar">
-    <div>
-      <h2 style="margin:0;">Personal Ledger</h2>
-      <div id="lastUpdated" style="font-size: 0.8rem; color: #64748b; margin-top: 0.2rem;">Ready to sync</div>
-    </div>
-    <div class="btn-group">
-      <button class="btn btn-outline" onclick="toggleManageDrawer()">+ Add Person</button>
-      <button id="fetchBtn" class="btn" onclick="fetchBalances()">🔄 Sync Sheet</button>
-    </div>
-  </div>
-
-  <!-- Drawer: Add/Edit Person -->
-  <div id="manageDrawer" class="manage-drawer">
-    <h4 style="margin: 0 0 0.8rem 0;">Add New Person</h4>
-    <form id="addPersonForm" class="manage-grid">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-8 flex justify-between items-center">
       <div>
-        <label>Name</label>
-        <input type="text" id="newName" placeholder="e.g., Rahul" required style="margin-bottom:0;">
+        <h1 class="text-2xl font-bold text-slate-900">Directory & Ledger Dashboard</h1>
+        <p class="text-sm text-slate-500">Click any person card to view transactions, edit, or delete records.</p>
       </div>
-      <div>
-        <label>Group / Tag (Optional)</label>
-        <input type="text" id="newGroup" placeholder="e.g., Friends, Office" style="margin-bottom:0;">
-      </div>
-      <div>
-        <label>Contact (Optional)</label>
-        <input type="text" id="newContact" placeholder="Phone or Email" style="margin-bottom:0;">
-      </div>
-      <button type="submit" id="savePersonBtn" class="btn" style="height: 42px;">Save Person</button>
-    </form>
-  </div>
+      <button onclick="loadDashboard()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Refresh</button>
+    </header>
 
-  <!-- Entry Form -->
-  <div id="formPanel" class="panel">
-    <h3 id="formTitle" style="margin-top:0; margin-bottom: 1rem;">Log Transaction</h3>
-    <form id="entryForm">
-      <input type="hidden" id="editRowId" value="">
-
-      <div class="form-row">
-        <div>
-          <label>Type</label>
-          <select id="type" required>
-            <option value="Given">Given (I lent money/Paid for them)</option>
-            <option value="Received">Received (They paid me back)</option>
-          </select>
-        </div>
-        <div>
-          <label>Date</label>
-          <input type="date" id="date" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div>
-          <label>Person</label>
-          <select id="person" required></select>
-        </div>
-        <div>
-          <label>Category</label>
-          <select id="category" required>
-            <option value="Bill Split">Bill Split</option>
-            <option value="Food & Dining">Food & Dining</option>
-            <option value="Travel">Travel</option>
-            <option value="Cash Loan">Cash Loan</option>
-            <option value="Settlement">Settlement (Paying back)</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div>
-          <label>Amount (₹)</label>
-          <input type="number" id="amount" step="0.01" placeholder="0.00" required>
-        </div>
-        <div>
-          <label>Notes</label>
-          <input type="text" id="notes" placeholder="e.g., Goa trip dinner">
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" id="submitBtn" class="submit-btn">Save to Ledger</button>
-        <button type="button" id="cancelEditBtn" class="cancel-btn" onclick="cancelEdit()">Cancel Edit</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Dashboard -->
-  <div class="section-title">People & Balances</div>
-  <div id="personsContainer" class="cards-grid"></div>
-
-  <!-- Transaction Modal -->
-  <div id="txModal" class="modal-overlay" onclick="closeModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <div>
-          <h3 id="modalPersonName">Person Name</h3>
-          <div id="modalPersonGroup" class="group-tag" style="margin-top:0.3rem;">Group</div>
-        </div>
-        <button class="modal-close" onclick="closeModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-summary">
-          <div style="font-size: 0.85rem; color: #64748b; font-weight: 600;">CURRENT NET BALANCE</div>
-          <div id="modalNetBalance" class="net-balance">₹0</div>
-          <div id="modalStatusBadge" class="status-badge">Settled</div>
-        </div>
-        <div style="font-weight: 700; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">Transaction History</div>
-        <div id="modalTxList">
-          <!-- Transactions injected here via JS -->
-        </div>
-      </div>
+    <!-- Person Tiles Grid -->
+    <div id="personsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <!-- Dynamically Injected Tiles -->
+      <div class="p-6 bg-white rounded-xl shadow-sm border border-slate-200 animate-pulse">Loading persons...</div>
     </div>
   </div>
+
+  <!-- Modal Popup for Person Ledger -->
+  <div id="ledgerModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 id="modalPersonName" class="text-lg font-bold text-slate-900">Ledger Details</h3>
+          <p class="text-xs text-slate-500">Manage transaction history for this person</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+      </div>
+
+      <!-- Modal Body (Transaction Table) -->
+      <div class="p-6 overflow-y-auto flex-1">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <th class="pb-3">Date</th>
+              <th class="pb-3">Type</th>
+              <th class="pb-3">Amount</th>
+              <th class="pb-3">Notes</th>
+              <th class="pb-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody" class="divide-y divide-slate-100 text-sm">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+        <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Edit Row Inline Modal or Form Overlay (Simple prompt/inline handling) -->
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZurpiht7_62xdPEFsYMbRVADUPM_OYiJy0FSR9CJNc4wvXWFBwNJDtbm0u1NSsjtu4A/exec';
-    
-    let cache = { config: {}, stats: {}, recent: [] };
-    document.getElementById('date').valueAsDate = new Date();
+    // Load persons grid on start
+    window.onload = function() {
+      loadDashboard();
+    };
 
-    function toggleManageDrawer() {
-      document.getElementById('manageDrawer').classList.toggle('open');
+    function loadDashboard() {
+      google.script.run
+        .withSuccessHandler(renderPersonsGrid)
+        .withFailureHandler(err => alert('Error loading data: ' + err.message))
+        .getDashboardData();
     }
 
-    function populateDropdown(config) {
-      const select = document.getElementById('person');
-      const currentVal = select.value;
-      select.innerHTML = '';
-      
-      const groups = {};
-      Object.keys(config).forEach(name => {
-        const group = config[name].group || 'Ungrouped';
-        if (!groups[group]) groups[group] = [];
-        groups[group].push(name);
-      });
+    function renderPersonsGrid(persons) {
+      const grid = document.getElementById('personsGrid');
+      grid.innerHTML = '';
 
-      Object.keys(groups).sort().forEach(group => {
-        const optgroup = document.createElement('optgroup');
-        optgroup.label = group;
-        groups[group].forEach(name => {
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          optgroup.appendChild(opt);
-        });
-        select.appendChild(optgroup);
-      });
-      if (currentVal && config[currentVal]) select.value = currentVal;
-    }
-
-    function renderDashboard(data, statusMsg) {
-      cache = data;
-      populateDropdown(data.personConfig || {});
-      
-      const container = document.getElementById('personsContainer');
-      container.innerHTML = '';
-
-      const names = Object.keys(data.personConfig || {});
-      
-      names.forEach(name => {
-        const config = data.personConfig[name];
-        const stats = data.stats[name] || { net: 0, given: 0, received: 0 };
-        
-        let statusText = 'Settled up';
-        let valClass = 'bal-settled';
-        let bgClass = 'bg-neu';
-        
-        if (stats.net > 0) {
-          statusText = 'They owe you';
-          valClass = 'bal-positive';
-          bgClass = 'bg-pos';
-        } else if (stats.net < 0) {
-          statusText = 'You owe them';
-          valClass = 'bal-negative';
-          bgClass = 'bg-neg';
-        }
-
-        const safeName = name.replace(/'/g, "\\'");
-        
-        container.innerHTML += `
-          <div class="person-card" onclick="openModal('${safeName}')">
-            <div class="card-top">
-              <div>
-                <h4>${name}</h4>
-                ${config.group ? `<span class="group-tag">${config.group}</span>` : ''}
-              </div>
-              <button class="del-btn" onclick="event.stopPropagation(); deletePerson('${safeName}')" title="Remove Person">✕</button>
-            </div>
-            <div class="net-balance ${valClass}">
-              ₹${Math.abs(stats.net).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-            </div>
-            <span class="status-badge ${bgClass}">${statusText}</span>
-          </div>
-        `;
-      });
-
-      document.getElementById('lastUpdated').innerText = statusMsg;
-    }
-
-    /* Modal Logic */
-    function openModal(personName) {
-      const stats = cache.stats[personName] || { net: 0 };
-      const config = cache.config[personName] || { group: '' };
-      
-      document.getElementById('modalPersonName').innerText = personName;
-      document.getElementById('modalPersonGroup').innerText = config.group || 'Person';
-      
-      const balEl = document.getElementById('modalNetBalance');
-      const badgeEl = document.getElementById('modalStatusBadge');
-      
-      balEl.innerText = `₹${Math.abs(stats.net).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
-      
-      if (stats.net > 0) {
-        balEl.className = 'net-balance bal-positive';
-        badgeEl.className = 'status-badge bg-pos';
-        badgeEl.innerText = 'They owe you';
-      } else if (stats.net < 0) {
-        balEl.className = 'net-balance bal-negative';
-        badgeEl.className = 'status-badge bg-neg';
-        badgeEl.innerText = 'You owe them';
-      } else {
-        balEl.className = 'net-balance bal-settled';
-        badgeEl.className = 'status-badge bg-neu';
-        badgeEl.innerText = 'Settled up';
+      if (!persons || persons.length === 0) {
+        grid.innerHTML = '<div class="col-span-full p-6 bg-white rounded-xl text-center text-slate-500">No transaction records found.</div>';
+        return;
       }
 
-      // Filter and inject transactions
-      const txListEl = document.getElementById('modalTxList');
-      const filtered = cache.recent.filter(t => t.person === personName);
-      
-      txListEl.innerHTML = filtered.length ? filtered.map(t => {
-        const isGiven = t.type === 'Given';
-        const sign = isGiven ? '+' : '-';
-        const amtClass = isGiven ? 'amt-given' : 'amt-received';
-        const summary = `${t.category} - ₹${t.amount}`.replace(/'/g, "\\'");
-        
-        return `
-          <div class="tx-row">
-            <div class="tx-left">
-              <strong>${t.category}</strong>
-              <div class="tx-date">${t.date.slice(0, 10)} ${t.notes ? '• ' + t.notes : ''}</div>
+      persons.forEach(p => {
+        const card = document.createElement('div');
+        card.className = "bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition cursor-pointer flex flex-col justify-between";
+        card.onclick = () => openLedgerModal(p.name);
+
+        const balanceColor = p.totalBalance >= 0 ? 'text-emerald-600' : 'text-rose-600';
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-sm">
+                ${p.name.charAt(0).toUpperCase()}
+              </span>
+              <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">${p.transactionCount} txns</span>
             </div>
-            <div class="tx-right">
-              <span class="${amtClass}">${sign}₹${t.amount.toLocaleString('en-IN')}</span>
-              <div class="action-icons">
-                <button class="icon-btn" onclick="startEdit(${t.rowId})" title="Edit">✏️</button>
-                <button class="icon-btn" onclick="deleteTx(${t.rowId}, '${summary}')" title="Delete">🗑️</button>
-              </div>
-            </div>
+            <h4 class="font-semibold text-slate-800 text-base truncate">${p.name}</h4>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+            <span class="text-xs text-slate-400">Net Balance</span>
+            <span class="font-bold text-sm ${balanceColor}">₹${p.totalBalance.toLocaleString()}</span>
           </div>
         `;
-      }).join('') : '<div style="text-align:center; padding: 1.5rem; color: #94a3b8;">No transactions found.</div>';
-
-      document.getElementById('txModal').classList.add('open');
+        grid.appendChild(card);
+      });
     }
 
-    function closeModal(event) {
-      if (event && event.target !== document.getElementById('txModal')) return;
-      document.getElementById('txModal').classList.remove('open');
+    function openLedgerModal(personName) {
+      document.getElementById('modalPersonName').innerText = personName + "'s Ledger";
+      document.getElementById('ledgerModal').classList.remove('hidden');
+      
+      google.script.run
+        .withSuccessHandler(renderLedgerTable)
+        .getTransactionsByPerson(personName);
     }
 
-    /* CRUD Operations */
-    async function fetchBalances() {
-      const btn = document.getElementById('fetchBtn');
-      btn.disabled = true; btn.innerText = '⏳ Syncing...';
-      try {
-        const res = await fetch(SCRIPT_URL);
-        const data = await res.json();
-        const now = new Date().toLocaleString('en-IN');
-        localStorage.setItem('ledgerCache', JSON.stringify({ data, time: now }));
-        renderDashboard({ config: data.personConfig, stats: data.stats, recent: data.recent }, 'Synced: ' + now);
-      } catch (err) {
-        alert('Fetch failed. Check URL or connection.');
-      } finally {
-        btn.disabled = false; btn.innerText = '🔄 Sync Sheet';
+    function closeModal() {
+      document.getElementById('ledgerModal').classList.add('hidden');
+      loadDashboard(); // Refresh grid in case edits happened
+    }
+
+    function renderLedgerTable(transactions) {
+      const tbody = document.getElementById('modalTableBody');
+      tbody.innerHTML = '';
+
+      if (!transactions || transactions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">No transactions recorded for this person.</td></tr>`;
+        return;
       }
+
+      transactions.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="py-3 text-slate-600">${t.date}</td>
+          <td class="py-3"><span class="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">${t.type}</span></td>
+          <td class="py-3 font-semibold text-slate-800">₹${Number(t.amount).toLocaleString()}</td>
+          <td class="py-3 text-slate-500 truncate max-w-xs">${t.notes || '-'}</td>
+          <td class="py-3 text-right space-x-2">
+            <button onclick="editTransaction(${t.rowIndex}, '${t.date}', '${t.name}', '${t.type}', ${t.amount}, '${t.notes}')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">Edit</button>
+            <button onclick="removeTransaction(${t.rowIndex})" class="text-rose-500 hover:text-rose-700 text-xs font-semibold">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    document.getElementById('addPersonForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('savePersonBtn');
-      btn.disabled = true; btn.innerText = 'Saving...';
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST', body: JSON.stringify({
-            action: 'addPerson',
-            name: document.getElementById('newName').value.trim(),
-            group: document.getElementById('newGroup').value.trim(),
-            contact: document.getElementById('newContact').value.trim()
+    function removeTransaction(rowIndex) {
+      if (confirm('Are you sure you want to delete this transaction?')) {
+        google.script.run
+          .withSuccessHandler(() => {
+            // Refresh modal data for current person name
+            const currentName = document.getElementById('modalPersonName').innerText.replace("'s Ledger", "");
+            openLedgerModal(currentName);
           })
-        });
-        document.getElementById('addPersonForm').reset();
-        await fetchBalances();
-      } catch (err) { alert('Failed to save.'); } 
-      finally { btn.disabled = false; btn.innerText = 'Save Person'; }
-    });
-
-    async function deletePerson(name) {
-      if (!confirm(`Remove ${name} from your list? (Transactions remain in the sheet)`)) return;
-      try {
-        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deletePerson', name }) });
-        await fetchBalances();
-      } catch (err) { alert('Failed to delete.'); }
+          .deleteTransaction(rowIndex);
+      }
     }
 
-    function startEdit(rowId) {
-      closeModal(); // Close modal to focus on main form
-      const tx = cache.recent.find(t => t.rowId === rowId);
-      if (!tx) return;
+    function editTransaction(rowIndex, date, name, type, amount, notes) {
+      // Prompt inputs for simplicity, or bind to a custom edit sub-form
+      const newAmount = prompt("Edit Amount:", amount);
+      if (newAmount === null) return;
+      
+      const newType = prompt("Edit Type (Credit/Debit):", type);
+      if (newType === null) return;
 
-      document.getElementById('editRowId').value = tx.rowId;
-      document.getElementById('type').value = tx.type;
-      document.getElementById('date').value = String(tx.date).slice(0, 10);
-      document.getElementById('person').value = tx.person;
-      document.getElementById('category').value = tx.category;
-      document.getElementById('amount').value = tx.amount;
-      document.getElementById('notes').value = tx.notes || '';
+      const newNotes = prompt("Edit Notes:", notes);
+      if (newNotes === null) return;
 
-      document.getElementById('formPanel').classList.add('editing-mode');
-      document.getElementById('formTitle').innerText = `✏️ Editing Entry`;
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = 'Update Ledger';
-      btn.classList.add('update-btn');
-      document.getElementById('cancelEditBtn').style.display = 'inline-block';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function cancelEdit() {
-      document.getElementById('entryForm').reset();
-      document.getElementById('editRowId').value = '';
-      document.getElementById('date').valueAsDate = new Date();
-      document.getElementById('formPanel').classList.remove('editing-mode');
-      document.getElementById('formTitle').innerText = 'Log Transaction';
-      const btn = document.getElementById('submitBtn');
-      btn.innerText = 'Save to Ledger';
-      btn.classList.remove('update-btn');
-      document.getElementById('cancelEditBtn').style.display = 'none';
-    }
-
-    async function deleteTx(rowId, summaryText) {
-      if (!confirm(`Delete this entry permanently?\n(${summaryText})`)) return;
-      closeModal();
-      try {
-        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteTransaction', rowId }) });
-        if (document.getElementById('editRowId').value == rowId) cancelEdit();
-        await fetchBalances();
-      } catch (err) { alert('Failed to delete.'); }
-    }
-
-    document.getElementById('entryForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      const isEditing = Boolean(document.getElementById('editRowId').value);
-      btn.disabled = true; btn.innerText = 'Saving...';
-
-      const payload = {
-        action: isEditing ? 'editTransaction' : 'addTransaction',
-        rowId: isEditing ? Number(document.getElementById('editRowId').value) : undefined,
-        type: document.getElementById('type').value,
-        date: document.getElementById('date').value,
-        person: document.getElementById('person').value,
-        category: document.getElementById('category').value,
-        amount: document.getElementById('amount').value,
-        notes: document.getElementById('notes').value
+      const updatedData = {
+        date: date,
+        name: name,
+        type: newType,
+        amount: parseFloat(newAmount),
+        notes: newNotes
       };
 
-      try {
-        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-        cancelEdit();
-        await fetchBalances();
-      } catch (err) { alert('Failed to save.'); } 
-      finally { btn.disabled = false; btn.innerText = isEditing ? 'Update Ledger' : 'Save to Ledger'; }
-    });
-
-    // Load initial state
-    const cachedData = localStorage.getItem('ledgerCache');
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-      renderDashboard({ config: parsed.data.personConfig, stats: parsed.data.stats, recent: parsed.data.recent }, 'Cached: ' + parsed.time);
-    } else {
-      fetchBalances();
+      google.script.run
+        .withSuccessHandler(() => {
+          openLedgerModal(name);
+        })
+        .updateTransaction(rowIndex, updatedData);
     }
   </script>
 </body>
