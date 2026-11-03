@@ -24,6 +24,55 @@
 
   <!-- Mobile App Container -->
   <div class="w-full max-w-md min-h-screen bg-black flex flex-col relative pb-20 select-none">
+    <!-- ==================== LOCK SCREEN (PASSWORD & OTP AUTH) ==================== -->
+<div id="authScreen" class="fixed inset-0 max-w-md mx-auto bg-black z-50 flex flex-col justify-center p-6">
+  <div class="card-dark rounded-2xl p-6 border border-slate-800 shadow-2xl">
+    <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mb-4 mx-auto">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+      </svg>
+    </div>
+    <h2 class="text-xl font-bold text-center text-white mb-1">Sree Ledger Locked</h2>
+    <p class="text-xs text-slate-400 text-center mb-6">Verify your identity to access transactions</p>
+
+    <!-- Auth Mode Tabs -->
+    <div class="grid grid-cols-2 gap-2 p-1 bg-black rounded-xl mb-5 border border-slate-800">
+      <button onclick="switchAuthTab('password')" id="tabPassBtn" class="py-2 text-xs font-semibold rounded-lg bg-blue-500 text-white transition">
+        Password
+      </button>
+      <button onclick="switchAuthTab('otp')" id="tabOtpBtn" class="py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition">
+        Email OTP
+      </button>
+    </div>
+
+    <!-- Mode 1: Username & Password -->
+    <form id="passwordAuthForm" onsubmit="loginWithPassword(event)" class="space-y-3.5">
+      <input type="text" id="loginUser" required placeholder="Username"
+        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
+      <input type="password" id="loginPass" required placeholder="Password or PIN"
+        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500">
+      <button type="submit" id="loginPassBtn" class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
+        Unlock Ledger
+      </button>
+    </form>
+
+    <!-- Mode 2: Email OTP -->
+    <div id="otpAuthForm" class="hidden space-y-3.5">
+      <button type="button" onclick="requestEmailOtp()" id="sendOtpBtn"
+        class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 font-medium rounded-xl text-xs transition">
+        Send 6-Digit OTP to Email
+      </button>
+      <input type="number" id="loginOtpInput" placeholder="Enter 6-digit OTP"
+        class="w-full px-4 py-3 rounded-xl bg-black border border-slate-800 text-center tracking-widest text-base font-bold text-white focus:outline-none focus:border-blue-500">
+      <button type="button" onclick="verifyEmailOtp()" id="verifyOtpBtn"
+        class="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-sm transition">
+        Verify & Unlock
+      </button>
+    </div>
+
+    <p id="authErrorMsg" class="text-xs text-rose-400 text-center mt-4 hidden"></p>
+  </div>
+</div>
 
     <!-- ==================== VIEW 1: HOME DASHBOARD ==================== -->
     <div id="homeView" class="flex-1 flex flex-col p-4">
