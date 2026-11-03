@@ -1,195 +1,411 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Person Ledger Dashboard</title>
-  <!-- Tailwind CSS for modern responsive design -->
+  <title>Lend & Borrow Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen p-6">
+<body class="bg-slate-100 text-slate-800 min-h-screen p-4 md:p-8">
 
   <div class="max-w-6xl mx-auto">
-    <header class="mb-8 flex justify-between items-center">
+    <!-- Top Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Directory & Ledger Dashboard</h1>
-        <p class="text-sm text-slate-500">Click any person card to view transactions, edit, or delete records.</p>
+        <h1 class="text-2xl font-bold text-slate-900">Personal Lend & Borrow Ledger</h1>
+        <p class="text-sm text-slate-500">Click any person tile to view history, edit, or delete transactions</p>
       </div>
-      <button onclick="loadDashboard()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">Refresh</button>
+      <div class="flex gap-2">
+        <button onclick="openEntryModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
+          + New Entry
+        </button>
+        <button onclick="fetchAllData()" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+          Refresh
+        </button>
+      </div>
     </header>
 
-    <!-- Person Tiles Grid -->
+    <!-- Overall Summary Banner -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">You Will Get (They Owe You)</span>
+        <p id="totalToGet" class="text-2xl font-bold text-emerald-600 mt-1">₹0</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">You Owe (To Pay Back)</span>
+        <p id="totalToPay" class="text-2xl font-bold text-rose-600 mt-1">₹0</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Overall Position</span>
+        <p id="netPosition" class="text-2xl font-bold text-slate-800 mt-1">₹0</p>
+      </div>
+    </div>
+
+    <!-- Persons Tiles Grid -->
     <div id="personsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      <!-- Dynamically Injected Tiles -->
-      <div class="p-6 bg-white rounded-xl shadow-sm border border-slate-200 animate-pulse">Loading persons...</div>
+      <div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-500 animate-pulse">
+        Syncing ledger with Google Sheets...
+      </div>
     </div>
   </div>
 
-  <!-- Modal Popup for Person Ledger -->
-  <div id="ledgerModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+  <!-- MODAL 1: Person Transaction History Popup -->
+  <div id="ledgerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-40">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[88vh]">
       
       <!-- Modal Header -->
-      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+      <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
         <div>
-          <h3 id="modalPersonName" class="text-lg font-bold text-slate-900">Ledger Details</h3>
-          <p class="text-xs text-slate-500">Manage transaction history for this person</p>
+          <h3 id="modalPersonTitle" class="text-lg font-bold text-slate-900">Person Name</h3>
+          <p id="modalPersonSub" class="text-xs font-medium text-slate-500"></p>
         </div>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl">&times;</button>
+        <div class="flex items-center gap-3">
+          <button onclick="openEntryModalForActivePerson()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700">
+            + Add for Person
+          </button>
+          <button onclick="closeLedgerModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        </div>
       </div>
 
-      <!-- Modal Body (Transaction Table) -->
+      <!-- Modal Table Body -->
       <div class="p-6 overflow-y-auto flex-1">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <tr class="border-b border-slate-200 text-xs font-semibold text-slate-400 uppercase">
               <th class="pb-3">Date</th>
-              <th class="pb-3">Type</th>
+              <th class="pb-3">Flow</th>
               <th class="pb-3">Amount</th>
               <th class="pb-3">Notes</th>
               <th class="pb-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="modalTableBody" class="divide-y divide-slate-100 text-sm">
-            <!-- Dynamically populated rows -->
-          </tbody>
+          <tbody id="ledgerTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
         </table>
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-        <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Close</button>
+      <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+        <button onclick="closeLedgerModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300">
+          Close
+        </button>
       </div>
-
     </div>
   </div>
 
-  <!-- Edit Row Inline Modal or Form Overlay (Simple prompt/inline handling) -->
+  <!-- MODAL 2: Add / Edit Transaction Popup -->
+  <div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <h3 id="entryModalTitle" class="text-base font-bold text-slate-900">New Transaction</h3>
+        <button onclick="closeEntryModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+      </div>
+
+      <form id="txForm" onsubmit="saveTransaction(event)" class="p-6 space-y-4">
+        <input type="hidden" id="txId">
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Person Name</label>
+          <input type="text" id="txPerson" list="existingPersons" required placeholder="e.g., Sampath"
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <datalist id="existingPersons"></datalist>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Transaction Type</label>
+            <select id="txType" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="GAVE">You Gave / Lent (+)</option>
+              <option value="GOT">You Got / Borrowed (-)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Amount (₹)</label>
+            <input type="number" step="0.01" id="txAmount" required placeholder="0.00"
+              class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Date</label>
+          <input type="date" id="txDate" required
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Notes / Reason</label>
+          <input type="text" id="txNotes" placeholder="e.g., Sent via UPI, Paid back cash"
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="pt-3 flex justify-end gap-2">
+          <button type="button" onclick="closeEntryModal()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200">
+            Cancel
+          </button>
+          <button type="submit" id="saveBtn" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+            Save Transaction
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <script>
-    // Load persons grid on start
-    window.onload = function() {
-      loadDashboard();
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+    const API_URL = "https://script.google.com/macros/s/AKfycbz3oWOkGpNyak1rW47hztYQr2_tUghhSpaB_2ghuORjagNI3ahQA2HeGWh368iWUrWd3w/exec";
+
+    let allTransactions = [];
+    let activePerson = null;
+
+    window.onload = () => {
+      document.getElementById('txDate').valueAsDate = new Date();
+      fetchAllData();
     };
 
-    function loadDashboard() {
-      google.script.run
-        .withSuccessHandler(renderPersonsGrid)
-        .withFailureHandler(err => alert('Error loading data: ' + err.message))
-        .getDashboardData();
+    // 1. Fetch all transactions from Google Sheet
+    async function fetchAllData() {
+      const grid = document.getElementById('personsGrid');
+      grid.innerHTML = `<div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-500 animate-pulse">Syncing ledger with Google Sheets...</div>`;
+
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        allTransactions = data.transactions || [];
+        renderDashboard();
+        if (activePerson) renderPersonLedger(activePerson);
+      } catch (err) {
+        grid.innerHTML = `<div class="col-span-full p-6 bg-rose-50 border border-rose-200 rounded-xl text-center text-rose-600 text-sm">
+          Failed to connect to Google Sheets API. Make sure you replaced <b>API_URL</b> and deployed with access set to "Anyone".
+        </div>`;
+      }
     }
 
-    function renderPersonsGrid(persons) {
+    // 2. Group by Person and Render Tiles
+    function renderDashboard() {
       const grid = document.getElementById('personsGrid');
+      const datalist = document.getElementById('existingPersons');
       grid.innerHTML = '';
+      datalist.innerHTML = '';
 
-      if (!persons || persons.length === 0) {
-        grid.innerHTML = '<div class="col-span-full p-6 bg-white rounded-xl text-center text-slate-500">No transaction records found.</div>';
+      const peopleMap = {};
+
+      allTransactions.forEach(t => {
+        const key = t.person.trim();
+        if (!peopleMap[key]) {
+          peopleMap[key] = { name: key, netBalance: 0, count: 0 };
+        }
+        // GAVE = + (You gave them money, so they owe you / lowers what you owe them)
+        // GOT  = - (You took money from them, so you owe them / lowers what they owe you)
+        if (t.type === 'GAVE') {
+          peopleMap[key].netBalance += Number(t.amount);
+        } else {
+          peopleMap[key].netBalance -= Number(t.amount);
+        }
+        peopleMap[key].count++;
+      });
+
+      const personsList = Object.values(peopleMap);
+
+      // Update Top Summary Cards
+      let totalGet = 0;
+      let totalPay = 0;
+      personsList.forEach(p => {
+        if (p.netBalance > 0) totalGet += p.netBalance;
+        if (p.netBalance < 0) totalPay += Math.abs(p.netBalance);
+
+        // Populate autocomplete datalist
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        datalist.appendChild(opt);
+      });
+
+      document.getElementById('totalToGet').innerText = `₹${totalGet.toLocaleString('en-IN')}`;
+      document.getElementById('totalToPay').innerText = `₹${totalPay.toLocaleString('en-IN')}`;
+      const net = totalGet - totalPay;
+      const netEl = document.getElementById('netPosition');
+      netEl.innerText = `${net >= 0 ? '+' : '-'}₹${Math.abs(net).toLocaleString('en-IN')}`;
+      netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+      if (personsList.length === 0) {
+        grid.innerHTML = `<div class="col-span-full p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-400">No entries yet. Click "+ New Entry" to add your first transaction.</div>`;
         return;
       }
 
-      persons.forEach(p => {
+      personsList.forEach(p => {
         const card = document.createElement('div');
-        card.className = "bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition cursor-pointer flex flex-col justify-between";
+        card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:shadow-md hover:border-indigo-400 transition cursor-pointer flex flex-col justify-between";
         card.onclick = () => openLedgerModal(p.name);
 
-        const balanceColor = p.totalBalance >= 0 ? 'text-emerald-600' : 'text-rose-600';
+        let statusBadge = '';
+        let amountClass = '';
+
+        if (p.netBalance > 0) {
+          statusBadge = `<span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Owes You</span>`;
+          amountClass = 'text-emerald-600';
+        } else if (p.netBalance < 0) {
+          statusBadge = `<span class="text-xs font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded">You Owe</span>`;
+          amountClass = 'text-rose-600';
+        } else {
+          statusBadge = `<span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Settled</span>`;
+          amountClass = 'text-slate-500';
+        }
 
         card.innerHTML = `
           <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-sm">
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-sm">
                 ${p.name.charAt(0).toUpperCase()}
-              </span>
-              <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">${p.transactionCount} txns</span>
+              </div>
+              <span class="text-xs text-slate-400">${p.count} entries</span>
             </div>
-            <h4 class="font-semibold text-slate-800 text-base truncate">${p.name}</h4>
+            <h4 class="font-bold text-slate-800 text-base truncate">${p.name}</h4>
           </div>
           <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-            <span class="text-xs text-slate-400">Net Balance</span>
-            <span class="font-bold text-sm ${balanceColor}">₹${p.totalBalance.toLocaleString()}</span>
+            ${statusBadge}
+            <span class="font-bold text-base ${amountClass}">₹${Math.abs(p.netBalance).toLocaleString('en-IN')}</span>
           </div>
         `;
         grid.appendChild(card);
       });
     }
 
+    // 3. Open Person Ledger Modal
     function openLedgerModal(personName) {
-      document.getElementById('modalPersonName').innerText = personName + "'s Ledger";
+      activePerson = personName;
       document.getElementById('ledgerModal').classList.remove('hidden');
-      
-      google.script.run
-        .withSuccessHandler(renderLedgerTable)
-        .getTransactionsByPerson(personName);
+      renderPersonLedger(personName);
     }
 
-    function closeModal() {
-      document.getElementById('ledgerModal').classList.add('hidden');
-      loadDashboard(); // Refresh grid in case edits happened
-    }
-
-    function renderLedgerTable(transactions) {
-      const tbody = document.getElementById('modalTableBody');
+    function renderPersonLedger(personName) {
+      document.getElementById('modalPersonTitle').innerText = personName;
+      const tbody = document.getElementById('ledgerTableBody');
       tbody.innerHTML = '';
 
-      if (!transactions || transactions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">No transactions recorded for this person.</td></tr>`;
+      const personTx = allTransactions.filter(t => t.person.toLowerCase() === personName.toLowerCase());
+      
+      let net = 0;
+      personTx.forEach(t => net += (t.type === 'GAVE' ? Number(t.amount) : -Number(t.amount)));
+
+      const subEl = document.getElementById('modalPersonSub');
+      if (net > 0) subEl.innerText = `${personName} owes you ₹${net.toLocaleString('en-IN')}`;
+      else if (net < 0) subEl.innerText = `You owe ${personName} ₹${Math.abs(net).toLocaleString('en-IN')}`;
+      else subEl.innerText = `All settled up (₹0)`;
+
+      if (personTx.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">No transactions left for this person.</td></tr>`;
         return;
       }
 
-      transactions.forEach(t => {
+      personTx.forEach(t => {
+        const isGave = t.type === 'GAVE';
+        const badge = isGave
+          ? `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700">You Gave (+)</span>`
+          : `<span class="px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700">You Got (-)</span>`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="py-3 text-slate-600">${t.date}</td>
-          <td class="py-3"><span class="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">${t.type}</span></td>
-          <td class="py-3 font-semibold text-slate-800">₹${Number(t.amount).toLocaleString()}</td>
-          <td class="py-3 text-slate-500 truncate max-w-xs">${t.notes || '-'}</td>
-          <td class="py-3 text-right space-x-2">
-            <button onclick="editTransaction(${t.rowIndex}, '${t.date}', '${t.name}', '${t.type}', ${t.amount}, '${t.notes}')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold">Edit</button>
-            <button onclick="removeTransaction(${t.rowIndex})" class="text-rose-500 hover:text-rose-700 text-xs font-semibold">Delete</button>
+          <td class="py-3 text-slate-600 whitespace-nowrap">${t.date}</td>
+          <td class="py-3">${badge}</td>
+          <td class="py-3 font-bold ${isGave ? 'text-emerald-600' : 'text-rose-600'}">₹${Number(t.amount).toLocaleString('en-IN')}</td>
+          <td class="py-3 text-slate-500 max-w-xs truncate">${t.notes || '-'}</td>
+          <td class="py-3 text-right whitespace-nowrap space-x-3">
+            <button onclick="openEditModal('${t.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs">Edit</button>
+            <button onclick="deleteTx('${t.id}')" class="text-rose-500 hover:text-rose-700 font-semibold text-xs">Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function removeTransaction(rowIndex) {
-      if (confirm('Are you sure you want to delete this transaction?')) {
-        google.script.run
-          .withSuccessHandler(() => {
-            // Refresh modal data for current person name
-            const currentName = document.getElementById('modalPersonName').innerText.replace("'s Ledger", "");
-            openLedgerModal(currentName);
-          })
-          .deleteTransaction(rowIndex);
+    function closeLedgerModal() {
+      activePerson = null;
+      document.getElementById('ledgerModal').classList.add('hidden');
+    }
+
+    // 4. Handle Add / Edit Modal
+    function openEntryModal() {
+      document.getElementById('entryModalTitle').innerText = 'New Transaction';
+      document.getElementById('txId').value = '';
+      document.getElementById('txPerson').value = '';
+      document.getElementById('txType').value = 'GAVE';
+      document.getElementById('txAmount').value = '';
+      document.getElementById('txDate').valueAsDate = new Date();
+      document.getElementById('txNotes').value = '';
+      document.getElementById('entryModal').classList.remove('hidden');
+    }
+
+    function openEntryModalForActivePerson() {
+      openEntryModal();
+      if (activePerson) {
+        document.getElementById('txPerson').value = activePerson;
       }
     }
 
-    function editTransaction(rowIndex, date, name, type, amount, notes) {
-      // Prompt inputs for simplicity, or bind to a custom edit sub-form
-      const newAmount = prompt("Edit Amount:", amount);
-      if (newAmount === null) return;
-      
-      const newType = prompt("Edit Type (Credit/Debit):", type);
-      if (newType === null) return;
+    function openEditModal(txId) {
+      const tx = allTransactions.find(t => t.id === txId);
+      if (!tx) return;
 
-      const newNotes = prompt("Edit Notes:", notes);
-      if (newNotes === null) return;
+      document.getElementById('entryModalTitle').innerText = 'Edit Transaction';
+      document.getElementById('txId').value = tx.id;
+      document.getElementById('txPerson').value = tx.person;
+      document.getElementById('txType').value = tx.type;
+      document.getElementById('txAmount').value = tx.amount;
+      document.getElementById('txDate').value = tx.date;
+      document.getElementById('txNotes').value = tx.notes;
+      document.getElementById('entryModal').classList.remove('hidden');
+    }
 
-      const updatedData = {
-        date: date,
-        name: name,
-        type: newType,
-        amount: parseFloat(newAmount),
-        notes: newNotes
+    function closeEntryModal() {
+      document.getElementById('entryModal').classList.add('hidden');
+    }
+
+    // 5. Save (Add or Edit) via Fetch POST
+    async function saveTransaction(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Saving...';
+
+      const id = document.getElementById('txId').value;
+      const payload = {
+        action: id ? 'edit' : 'add',
+        id: id,
+        person: document.getElementById('txPerson').value.trim(),
+        type: document.getElementById('txType').value,
+        amount: parseFloat(document.getElementById('txAmount').value),
+        date: document.getElementById('txDate').value,
+        notes: document.getElementById('txNotes').value.trim()
       };
 
-      google.script.run
-        .withSuccessHandler(() => {
-          openLedgerModal(name);
-        })
-        .updateTransaction(rowIndex, updatedData);
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        closeEntryModal();
+        await fetchAllData();
+      } catch (err) {
+        alert('Error saving transaction: ' + err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Save Transaction';
+      }
+    }
+
+    // 6. Delete Transaction via Fetch POST
+    async function deleteTx(txId) {
+      if (!confirm('Delete this transaction permanently?')) return;
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'delete', id: txId })
+        });
+        await fetchAllData();
+      } catch (err) {
+        alert('Error deleting transaction: ' + err.message);
+      }
     }
   </script>
 </body>
